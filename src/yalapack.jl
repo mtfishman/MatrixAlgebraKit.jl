@@ -449,7 +449,8 @@ for (heev, heevr, heevd, hegvd, elty, relty) in
     @eval begin
         function heev!(A::AbstractMatrix{$elty},
                        W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
-                       V::AbstractMatrix{$elty}=A)
+                       V::AbstractMatrix{$elty}=A;
+                       uplo::AbstractChar='U') # shouldn't matter but 'U' seems slightly faster than 'L'
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
@@ -458,7 +459,6 @@ for (heev, heevr, heevd, hegvd, elty, relty) in
             else
                 ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
             end
-            uplo = 'U' # shouldn't matter but 'U' seems slightly faster than 'L'
             chkuplofinite(A, uplo)
             n == length(W) || throw(DimensionMismatch("length mismatch between A and W"))
             if length(V) == 0
@@ -513,6 +513,7 @@ for (heev, heevr, heevd, hegvd, elty, relty) in
         function heevr!(A::AbstractMatrix{$elty},
                         W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
                         V::AbstractMatrix{$elty}=similar(A);
+                        uplo::AbstractChar='U', # shouldn't matter but 'U' seems slightly faster than 'L'
                         kwargs...)
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
@@ -522,7 +523,6 @@ for (heev, heevr, heevd, hegvd, elty, relty) in
             else
                 ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
             end
-            uplo = 'U' # shouldn't matter but 'U' seems slightly faster than 'L'
             chkuplofinite(A, uplo)
             if haskey(kwargs, :irange)
                 il = first(irange)
@@ -623,7 +623,8 @@ for (heev, heevr, heevd, hegvd, elty, relty) in
 
         function heevd!(A::AbstractMatrix{$elty},
                         W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
-                        V::AbstractMatrix{$elty}=A)
+                        V::AbstractMatrix{$elty}=A;
+                        uplo::AbstractChar='U') # shouldn't matter but 'U' seems slightly faster than 'L'
             require_one_based_indexing(A, V, W)
             chkstride1(A, V, W)
             n = checksquare(A)
