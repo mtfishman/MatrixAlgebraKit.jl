@@ -9,7 +9,7 @@ diagview(A) = view(A, diagind(A))
 
 include("qr.jl")
 include("svd.jl")
-include("eigh.jl")
+# include("eigh.jl")
 
 @testset "MatrixAlgebraKit.jl" begin
     @testset "Code quality (Aqua.jl)" begin

@@ -7,49 +7,49 @@
         R = similar(A, min(m, n), n)
         Q2 = similar(Q)
         noR = similar(A, min(m, n), 0)
-        qr_compact!(copy!(Ac, A), Q, R)
+        qr_compact!(copy!(Ac, A), (Q, R))
         @test Q * R ≈ A
         @test Q' * Q ≈ I
-        qr_compact!(copy!(Ac, A), Q2, noR)
+        qr_compact!(copy!(Ac, A), (Q2, noR))
         @test Q == Q2
         # unblocked algorithm
-        qr_compact!(copy!(Ac, A), Q, R; blocksize=1)
+        qr_compact!(copy!(Ac, A), (Q, R); blocksize=1)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
-        qr_compact!(copy!(Ac, A), Q2, noR; blocksize=1)
+        qr_compact!(copy!(Ac, A), (Q2, noR); blocksize=1)
         @test Q == Q2
         if n <= m
-            qr_compact!(copy!(Q2, A), Q2, noR; blocksize=1) # in-place Q
+            qr_compact!(copy!(Q2, A), (Q2, noR); blocksize=1) # in-place Q
             @test Q ≈ Q2
         end
         # other blocking
-        qr_compact!(copy!(Ac, A), Q, R; blocksize=8)
+        qr_compact!(copy!(Ac, A), (Q, R); blocksize=8)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
-        qr_compact!(copy!(Ac, A), Q2, noR; blocksize=8)
+        qr_compact!(copy!(Ac, A), (Q2, noR); blocksize=8)
         @test Q == Q2
         # pivoted
-        qr_compact!(copy!(Ac, A), Q, R; pivoted=true)
+        qr_compact!(copy!(Ac, A), (Q, R); pivoted=true)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
-        qr_compact!(copy!(Ac, A), Q2, noR; pivoted=true)
+        qr_compact!(copy!(Ac, A), (Q2, noR); pivoted=true)
         @test Q == Q2
         # positive
-        qr_compact!(copy!(Ac, A), Q, R; positive=true)
+        qr_compact!(copy!(Ac, A), (Q, R); positive=true)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
         @test all(>=(zero(real(T))), real(diag(R)))
-        qr_compact!(copy!(Ac, A), Q2, noR; positive=true)
+        qr_compact!(copy!(Ac, A), (Q2, noR); positive=true)
         @test Q == Q2
         # positive and blocksize 1
-        qr_compact!(copy!(Ac, A), Q, R; positive=true, blocksize=1)
+        qr_compact!(copy!(Ac, A), (Q, R); positive=true, blocksize=1)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
         @test all(>=(zero(real(T))), real(diag(R)))
-        qr_compact!(copy!(Ac, A), Q2, noR; positive=true, blocksize=1)
+        qr_compact!(copy!(Ac, A), (Q2, noR); positive=true, blocksize=1)
         @test Q == Q2
         # positive and pivoted
-        qr_compact!(copy!(Ac, A), Q, R; positive=true, pivoted=true)
+        qr_compact!(copy!(Ac, A), (Q, R); positive=true, pivoted=true)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
         if n <= m
@@ -61,7 +61,7 @@
                 @test real(R[i, j]) >= zero(real(T))
             end
         end
-        qr_compact!(copy!(Ac, A), Q2, noR; positive=true, pivoted=true)
+        qr_compact!(copy!(Ac, A), (Q2, noR); positive=true, pivoted=true)
         @test Q == Q2
     end
 end
@@ -75,49 +75,49 @@ end
         R = similar(A)
         Q2 = similar(Q)
         noR = similar(A, min(m, n), 0)
-        qr_full!(copy!(Ac, A), Q, R)
+        qr_full!(copy!(Ac, A), (Q, R))
         @test Q * R ≈ A
         @test Q' * Q ≈ I
-        qr_full!(copy!(Ac, A), Q2, noR)
+        qr_full!(copy!(Ac, A), (Q2, noR))
         @test Q == Q2
         # unblocked algorithm
-        qr_full!(copy!(Ac, A), Q, R; blocksize=1)
+        qr_full!(copy!(Ac, A), (Q, R); blocksize=1)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
-        qr_full!(copy!(Ac, A), Q2, noR; blocksize=1)
+        qr_full!(copy!(Ac, A), (Q2, noR); blocksize=1)
         @test Q == Q2
         if n == m
-            qr_full!(copy!(Q2, A), Q2, noR; blocksize=1) # in-place Q
+            qr_full!(copy!(Q2, A), (Q2, noR); blocksize=1) # in-place Q
             @test Q ≈ Q2
         end
         # other blocking
-        qr_full!(copy!(Ac, A), Q, R; blocksize=8)
+        qr_full!(copy!(Ac, A), (Q, R); blocksize=8)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
-        qr_full!(copy!(Ac, A), Q2, noR; blocksize=8)
+        qr_full!(copy!(Ac, A), (Q2, noR); blocksize=8)
         @test Q == Q2
         # pivoted
-        qr_full!(copy!(Ac, A), Q, R; pivoted=true)
+        qr_full!(copy!(Ac, A), (Q, R); pivoted=true)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
-        qr_full!(copy!(Ac, A), Q2, noR; pivoted=true)
+        qr_full!(copy!(Ac, A), (Q2, noR); pivoted=true)
         @test Q == Q2
         # positive
-        qr_full!(copy!(Ac, A), Q, R; positive=true)
+        qr_full!(copy!(Ac, A), (Q, R); positive=true)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
         @test all(>=(zero(real(T))), real(diag(R)))
-        qr_full!(copy!(Ac, A), Q2, noR; positive=true)
+        qr_full!(copy!(Ac, A), (Q2, noR); positive=true)
         @test Q == Q2
         # positive and blocksize 1
-        qr_full!(copy!(Ac, A), Q, R; positive=true, blocksize=1)
+        qr_full!(copy!(Ac, A), (Q, R); positive=true, blocksize=1)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
         @test all(>=(zero(real(T))), real(diag(R)))
-        qr_full!(copy!(Ac, A), Q2, noR; positive=true, blocksize=1)
+        qr_full!(copy!(Ac, A), (Q2, noR); positive=true, blocksize=1)
         @test Q == Q2
         # positive and pivoted
-        qr_full!(copy!(Ac, A), Q, R; positive=true, pivoted=true)
+        qr_full!(copy!(Ac, A), (Q, R); positive=true, pivoted=true)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
         if n <= m
@@ -129,7 +129,7 @@ end
                 @test real(R[i, j]) >= zero(real(T))
             end
         end
-        qr_full!(copy!(Ac, A), Q2, noR; positive=true, pivoted=true)
+        qr_full!(copy!(Ac, A), (Q2, noR); positive=true, pivoted=true)
         @test Q == Q2
     end
 end
