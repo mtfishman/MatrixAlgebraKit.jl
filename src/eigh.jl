@@ -9,13 +9,13 @@ end
 function eigh_vals!(A::AbstractMatrix, D=eigh_vals_init(A); kwargs...)
     return eigh_vals!(A, D, default_algorithm(eigh_vals!, A; kwargs...))
 end
-function eigh_trunc!(A::AbstractMatrix; kwargs...)
-    return eigh_trunc!(A, default_algorithm(eigh_trunc!, A; kwargs...))
+function eigh_trunc!(A::AbstractMatrix, trunc::TruncationStrategy; kwargs...)
+    return eigh_trunc!(A, default_algorithm(eigh_trunc!, A; kwargs...), trunc)
 end
 
 function eigh_full_init(A::AbstractMatrix)
     n = size(A, 1) # square check will happen later
-    D = similar(A, real(eltype(A)), n)
+    D = Diagonal(similar(A, real(eltype(A)), n))
     V = similar(A, (n, n))
     return (D, V)
 end
@@ -36,37 +36,39 @@ function default_algorithm(::typeof(eigh_trunc!), A::AbstractMatrix; kwargs...)
 end
 
 function default_eigh_algorithm(A::StridedMatrix{T}; kwargs...) where {T<:BlasFloat}
-    return LAPACK_RobustRepresentations(; kwargs...)
+    return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
 end
 
-function check_eigh_full_input(A::AbstractMatrix, (D, V))
+function check_eigh_full_input(A::AbstractMatrix, DV)
     m, n = size(A)
-    m == n || throw(ArgumentError("Eigenvalue decompsition requires square matrix"))
-    size(D) == (n,) ||
-        throw(DimensionMismatch("Eigenvalue vector `D` must have length equal to size(A, 1)"))
-    size(V) == (n, n) ||
-        throw(DimensionMismatch("Eigenvector matrix `V` must have size equal to A"))
+    m == n || throw(ArgumentError("Eigenvalue decompsition requires square input matrix"))
+    D, V = DV
+    (V isa AbstractMatrix && eltype(V) == eltype(A) && size(V) == (m, m)) ||
+        throw(ArgumentError("`eigh_full!` requires square V matrix with same size and `eltype` as A"))
+    (D isa Diagonal && eltype(D) == real(eltype(A)) && size(D) == (m, m)) ||
+        throw(ArgumentError("`eigh_full!` requires Diagonal matrix D with same size as A with a real `eltype`"))
     return nothing
 end
-function check_eigh_vals_input(A::AbstractMatrix, (D, V))
+function check_eigh_vals_input(A::AbstractMatrix, D)
     m, n = size(A)
-    m == n || throw(ArgumentError("Eigenvalue decompsition requires square matrix"))
-    size(D) == (n,) ||
-        throw(DimensionMismatch("Eigenvalue vector `D` must have length equal to size(A, 1)"))
+    m == n || throw(ArgumentError("Eigenvalue decompsition requires square input matrix"))
+    (size(D) == (n,) && eltype(D) == real(eltype(A))) ||
+        throw(ArgumentError("Eigenvalue vector `D` must have length equal to size(A, 1) with a real `eltype`"))
     return nothing
 end
 
-const LAPACK_EighAlgorithm = Union{LAPACK_RobustRepresentations,LAPACK_QRIteration,
-                                   LAPACK_DivideAndConquer}
 function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
     check_eigh_full_input(A, DV)
     D, V = DV
-    if alg isa LAPACK_RobustRepresentations
-        YALAPACK.heevr!(A, D, V; alg.kwargs...)
+    Dd = D.diag
+    if alg isa LAPACK_MultipleRelativelyRobustRepresentations
+        YALAPACK.heevr!(A, Dd, V; alg.kwargs...)
     elseif alg isa LAPACK_DivideAndConquer
-        YALAPACK.heevd!(A, D, V; alg.kwargs...)
-    else
-        YALAPACK.heev!(A, D, V; alg.kwargs...)
+        YALAPACK.heevd!(A, Dd, V; alg.kwargs...)
+    elseif alg isa LAPACK_Simple
+        YALAPACK.heev!(A, Dd, V; alg.kwargs...)
+    else # alg isa LAPACK_Expert
+        YALAPACK.heevx!(A, Dd, V; alg.kwargs...)
     end
     return D, V
 end
@@ -74,40 +76,27 @@ end
 function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
     check_eigh_vals_input(A, D)
     V = similar(A, (size(A, 1), 0))
-    if alg isa LAPACK_RobustRepresentations
+    if alg isa LAPACK_MultipleRelativelyRobustRepresentations
         YALAPACK.heevr!(A, D, V; alg.kwargs...)
     elseif alg isa LAPACK_DivideAndConquer
         YALAPACK.heevd!(A, D, V; alg.kwargs...)
-    else
+    elseif alg isa LAPACK_QRIteration # == LAPACK_Simple
         YALAPACK.heev!(A, D, V; alg.kwargs...)
+    else # alg isa LAPACK_Bisection == LAPACK_Expert
+        YALAPACK.heevx!(A, D, V; alg.kwargs...)
     end
     return D, V
 end
 
 # for eigh_trunc!, it doesn't make sense to preallocate D and V as we don't know their sizes
-# function eigh_trunc!(A::AbstractMatrix,
-#                      backend::LAPACKBackend;
-#                      alg=RobustRepresentations(),
-#                      atol=zero(real(eltype(A))),
-#                      rtol=zero(real(eltype(A))),
-#                      rank=size(A, 1),
-#                      kwargs...)
-#     if alg == RobustRepresentations()
-#         D, V = YALAPACK.heevr!(A; kwargs...)
-#     elseif alg == LinearAlgebra.DivideAndConquer()
-#         D, V = YALAPACK.heevd!(A; kwargs...)
-#     elseif alg == LinearAlgebra.QRIteration()
-#         D, V = YALAPACK.heev!(A; kwargs...)
-#     else
-#         throw(ArgumentError("Unknown LAPACK eigenvalue algorithm $alg"))
-#     end
-#     # eigenvalues are sorted in ascending order
-#     # TODO: do we assume that they are positive, or should we check for this?
-#     # or do we want to truncate based on absolute value and thus sort differently?
-#     n = length(D)
-#     tol = convert(eltype(D), max(atol, rtol * D[n]))
-#     s = max(n - rank + 1, findfirst(>=(tol), D))
-#     # TODO: do we want views here, such that we do not need extra allocations if we later
-#     # copy them into other storage
-#     return D[n:-1:s], V[:, n:-1:s]
-# end
+function eigh_trunc!(A::AbstractMatrix, alg::LAPACK_EighAlgorithm,
+                     trunc::TruncationStrategy)
+    DV = eigh_full_init(A)
+    D, V = eigh_full!(A, DV, alg)
+
+    Dd = D.diag
+    ind = findtruncated(Dd, trunc)
+    V′ = V[:, ind]
+    D′ = Diagonal(Dd[ind])
+    return (D′, V′)
+end

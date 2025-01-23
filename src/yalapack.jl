@@ -441,11 +441,11 @@ for (orglq, orgqr, orgql, orgrq, ormlq, ormqr, ormql, ormrq, gemqrt, elty) in
 end
 
 # Symmetric / Hermitian eigenvalue decomposition
-for (heev, heevr, heevd, hegvd, elty, relty) in
-    ((:dsyev_, :dsyevr_, :dsyevd_, :dsygvd_, :Float64, :Float64),
-     (:ssyev_, :ssyevr_, :ssyevd_, :ssygvd_, :Float32, :Float32),
-     (:zheev_, :zheevr_, :zheevd_, :zhegvd_, :ComplexF64, :Float64),
-     (:cheev_, :cheevr_, :cheevd_, :chegvd_, :ComplexF32, :Float32))
+for (heev, heevx, heevr, heevd, hegvd, elty, relty) in
+    ((:dsyev_, :dsyevx_, :dsyevr_, :dsyevd_, :dsygvd_, :Float64, :Float64),
+     (:ssyev_, :ssyevx_, :ssyevr_, :ssyevd_, :ssygvd_, :Float32, :Float32),
+     (:zheev_, :zheevx_, :zheevr_, :zheevd_, :zhegvd_, :ComplexF64, :Float64),
+     (:cheev_, :cheevx_, :cheevr_, :cheevd_, :chegvd_, :ComplexF32, :Float32))
     @eval begin
         function heev!(A::AbstractMatrix{$elty},
                        W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
@@ -510,6 +510,108 @@ for (heev, heevr, heevd, hegvd, elty, relty) in
             end
             return W, V
         end
+        function heevx!(A::AbstractMatrix{$elty},
+                        W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
+                        V::AbstractMatrix{$elty}=similar(A);
+                        uplo::AbstractChar='U', # shouldn't matter but 'U' seems slightly faster than 'L'
+                        kwargs...)
+            require_one_based_indexing(A, V, W)
+            chkstride1(A, V, W)
+            n = checksquare(A)
+            if $elty <: Real
+                issymmetric(A) || throw(ArgumentError("A must be symmetric"))
+            else
+                ishermitian(A) || throw(ArgumentError("A must be Hermitian"))
+            end
+            chkuplofinite(A, uplo)
+            if haskey(kwargs, :irange)
+                il = first(irange)
+                iu = last(irange)
+                vl = vu = zero($relty)
+                range = 'I'
+            elseif haskey(kwargs, :vl) || haskey(kwargs, :vu)
+                vl = convert($relty, get(kwargs, :vl, -Inf))
+                vu = convert($relty, get(kwargs, :vu, +Inf))
+                il = iu = 0
+                range = 'V'
+            else
+                il = iu = 0
+                vl = vu = zero($relty)
+                range = 'A'
+            end
+            length(W) == n || throw(DimensionMismatch("length mismatch between A and W"))
+            if length(V) == 0
+                jobz = 'N'
+            else
+                jobz = 'V'
+                size(V, 1) == n || throw(DimensionMismatch("size mismatch between A and V"))
+                if range == 'I'
+                    size(V, 2) >= iu - il + 1 ||
+                        throw(DimensionMismatch("number of columns of V must correspond to number of requested eigenvalues"))
+                else
+                    size(V, 2) == n ||
+                        throw(DimensionMismatch("size mismatch between A and V"))
+                end
+            end
+
+            lda = max(1, stride(A, 2))
+            ldv = max(1, stride(V, 2))
+            abstol = -one($relty)
+            m = Ref{BlasInt}()
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            iwork = Vector{BlasInt}(undef, 5 * n)
+            ifail = Vector{BlasInt}(undef, n)
+            info = Ref{BlasInt}()
+            if $elty <: Real
+                for i in 1:2  # first call returns lwork as work[1] and liwork as iwork[1]
+                    ccall((@blasfunc($heevx), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                           Ptr{BlasInt},
+                           Ptr{$elty}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Ptr{BlasInt},
+                           Ptr{BlasInt}, Clong, Clong, Clong),
+                          jobz, range, uplo,
+                          n, A, lda,
+                          vl, vu, il, iu, abstol, m,
+                          W, V, ldv,
+                          work, lwork, iwork, ifail,
+                          info, 1, 1, 1)
+                    chklapackerror(info[])
+                    if i == 1
+                        lwork = BlasInt(real(work[1]))
+                        resize!(work, lwork)
+                    end
+                end
+            else
+                rwork = Vector{$relty}(undef, 7 * n)
+                for i in 1:2  # first call returns lwork as work[1], lrwork as rwork[1] and liwork as iwork[1]
+                    ccall((@blasfunc($heevx), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ref{$elty}, Ref{$elty}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                           Ptr{BlasInt},
+                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ptr{BlasInt},
+                           Ptr{BlasInt},
+                           Ptr{BlasInt}, Clong, Clong, Clong),
+                          jobz, range, uplo,
+                          n, A, lda,
+                          vl, vu, il, iu, abstol, m,
+                          W, V, ldv,
+                          work, lwork, rwork, iwork, ifail,
+                          info, 1, 1, 1)
+                    chklapackerror(info[])
+                    if i == 1
+                        lwork = BlasInt(real(work[1]))
+                        resize!(work, lwork)
+                    end
+                end
+            end
+            return W, V, m[]
+        end
         function heevr!(A::AbstractMatrix{$elty},
                         W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
                         V::AbstractMatrix{$elty}=similar(A);
@@ -530,8 +632,8 @@ for (heev, heevr, heevd, hegvd, elty, relty) in
                 vl = vu = zero($relty)
                 range = 'I'
             elseif haskey(kwargs, :vl) || haskey(kwargs, :vu)
-                vl = get(kwargs, :ul, $relty(-Inf))
-                vu = get(kwargs, :vu, $relty(+Inf))
+                vl = convert($relty, get(kwargs, :vl, -Inf))
+                vu = convert($relty, get(kwargs, :vu, +Inf))
                 il = iu = 0
                 range = 'V'
             else
@@ -620,7 +722,6 @@ for (heev, heevr, heevd, hegvd, elty, relty) in
             end
             return W, V, m[]
         end
-
         function heevd!(A::AbstractMatrix{$elty},
                         W::AbstractVector{$relty}=similar(A, $relty, size(A, 1)),
                         V::AbstractMatrix{$elty}=A;
@@ -1075,12 +1176,101 @@ function _reorder_realeigendecomposition!(W, WR, WI, work, VR, jobvr)
 end
 
 # SVD
-for (gesvd, gesdd, elty, relty) in
-    ((:dgesvd_, :dgesdd_, :Float64, :Float64),
-     (:sgesvd_, :sgesdd_, :Float32, :Float32),
-     (:zgesvd_, :zgesdd_, :ComplexF64, :Float64),
-     (:cgesvd_, :cgesdd_, :ComplexF32, :Float32))
+for (gesvd, gesdd, gesvdx, gejsv, elty, relty) in
+    ((:dgesvd_, :dgesdd_, :dgesvdx_, :dgejsv_, :Float64, :Float64),
+     (:sgesvd_, :sgesdd_, :sgesvdx_, :sgejsv_, :Float32, :Float32),
+     (:zgesvd_, :zgesdd_, :zgesvdx_, :zgejsv_, :ComplexF64, :Float64),
+     (:cgesvd_, :cgesdd_, :cgesvdx_, :cgejsv_, :ComplexF32, :Float32))
     @eval begin
+        #! format: off
+        function gesvd!(A::AbstractMatrix{$elty},
+                        S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
+                        U::AbstractMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
+                        Vᴴ::AbstractMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2)))
+        #! format: on
+            require_one_based_indexing(A, U, Vᴴ, S)
+            chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            minmn = min(m, n)
+            if length(U) == 0
+                jobu = 'N'
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == minmn
+                    if U === A
+                        jobu = 'O'
+                    else
+                        jobu = 'S'
+                    end
+                elseif size(U, 2) == m
+                    jobu = 'A'
+                else
+                    throw(DimensionMismatch("invalid column size of U"))
+                end
+            end
+            if length(Vᴴ) == 0
+                jobvt = 'N'
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                if size(Vᴴ, 1) == minmn
+                    if Vᴴ === A
+                        jobvt = 'O'
+                    else
+                        jobvt = 'S'
+                    end
+                elseif size(Vᴴ, 1) == n
+                    jobvt = 'A'
+                else
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                end
+            end
+            length(S) == minmn ||
+                throw(DimensionMismatch("length mismatch between A and S"))
+
+            lda = max(1, stride(A, 2))
+            ldu = max(1, stride(U, 2))
+            ldv = max(1, stride(Vᴴ, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            cmplx = eltype(A) <: Complex
+            if cmplx
+                rwork = Vector{$relty}(undef, 5 * minmn)
+            end
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                #! format: off
+                if cmplx
+                    ccall((@blasfunc($gesvd), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty},
+                           Ptr{BlasInt}, Clong, Clong),
+                          jobu, jobvt, m, n, A, lda,
+                          S, U, ldu, Vᴴ, ldv,
+                          work, lwork, rwork,
+                          info, 1, 1)
+                else
+                    ccall((@blasfunc($gesvd), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ref{BlasInt},
+                           Ptr{BlasInt}, Clong, Clong),
+                          jobu, jobvt, m, n, A, lda,
+                          S, U, ldu, Vᴴ, ldv,
+                          work, lwork,
+                          info, 1, 1)
+                end
+                #! format: on
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return (S, U, Vᴴ)
+        end
         #! format: off
         function gesdd!(A::AbstractMatrix{$elty},
                         S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
@@ -1167,28 +1357,128 @@ for (gesvd, gesdd, elty, relty) in
             return (S, U, Vᴴ)
         end
         #! format: off
-        function gesvd!(A::AbstractMatrix{$elty},
-                        S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
-                        U::AbstractMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
-                        Vᴴ::AbstractMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2)))
+        function gesvdx!(A::AbstractMatrix{$elty},
+                         S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
+                         U::AbstractMatrix{$elty}=similar(A, $elty, size(A, 1), min(size(A)...)),
+                         Vᴴ::AbstractMatrix{$elty}=similar(A, $elty, min(size(A)...), size(A, 2));
+                         kwargs...)
         #! format: on
             require_one_based_indexing(A, U, Vᴴ, S)
             chkstride1(A, U, Vᴴ, S)
             m, n = size(A)
             minmn = min(m, n)
+            if haskey(kwargs, :irange)
+                il = first(irange)
+                iu = last(irange)
+                vl = vu = zero($relty)
+                range = 'I'
+            elseif haskey(kwargs, :vl) || haskey(kwargs, :vu)
+                vl = convert($relty, get(kwargs, :vl, -Inf))
+                vu = convert($relty, get(kwargs, :vu, +Inf))
+                il = iu = 0
+                range = 'V'
+            else
+                il = iu = 0
+                vl = vu = zero($relty)
+                range = 'A'
+            end
+
             if length(U) == 0
                 jobu = 'N'
             else
                 size(U, 1) == m ||
                     throw(DimensionMismatch("row size mismatch between A and U"))
-                if size(U, 2) == minmn
-                    if U === A
-                        jobu = 'O'
-                    else
-                        jobu = 'S'
-                    end
+                size(U, 2) >= (range == 'I' ? iu - il + 1 : minmn) ||
+                    throw(DimensionMismatch("invalid column size of U"))
+                jobu = 'V'
+            end
+            if length(Vᴴ) == 0
+                jobvt = 'N'
+            else
+                size(Vᴴ, 2) == n ||
+                    throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
+                size(Vᴴ, 1) >= (range == 'I' ? iu - il + 1 : minmn) ||
+                    throw(DimensionMismatch("invalid row size of Vᴴ"))
+                jobvt = 'V'
+            end
+            length(S) == minmn ||
+                throw(DimensionMismatch("length mismatch between A and S"))
+
+            lda = max(1, stride(A, 2))
+            ldu = max(1, stride(U, 2))
+            ldv = max(1, stride(Vᴴ, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            iwork = Vector{BlasInt}(undef, 12 * minmn)
+            cmplx = eltype(A) <: Complex
+            if cmplx
+                rwork = Vector{$relty}(undef, minmn * (minmn * 2 + 15 * minmn)) # very strange specification in LAPACK docs: minmn * (minmn * 2 + 15 * minmn)
+            end
+            ns = Ref{BlasInt}()
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                #! format: off
+                if cmplx
+                    ccall((@blasfunc($gesvdx), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                           Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ref{$relty}, Ref{$relty}, Ref{BlasInt}, Ref{BlasInt}, Ptr{BlasInt},
+                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ptr{BlasInt},
+                           Ptr{BlasInt}, Clong, Clong, Clong),
+                          jobu, jobvt, range,
+                          m, n, A, lda,
+                          vl, vu, il, iu, ns,
+                          S, U, ldu, Vᴴ, ldv,
+                          work, lwork, rwork, iwork,
+                          info, 1, 1, 1)
+                else
+                    ccall((@blasfunc($gesvdx), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                           Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ref{$relty}, Ref{$relty}, Ref{BlasInt}, Ref{BlasInt}, Ptr{BlasInt},
+                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                           Ptr{BlasInt}, Clong, Clong, Clong),
+                          jobu, jobvt, range,
+                          m, n, A, lda,
+                          vl, vu, il, iu, ns,
+                          S, U, ldu, Vᴴ, ldv,
+                          work, lwork, iwork,
+                          info, 1, 1, 1)
+                end
+                #! format: on
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return (S, U, Vᴴ)
+        end
+        function gejsv!(A::AbstractMatrix{$elty},
+                        S::AbstractVector{$relty}=similar(A, $relty, min(size(A)...)),
+                        U::AbstractMatrix{$elty}=similar(A, $elty, size(A, 1),
+                                                         min(size(A)...)),
+                        Vᴴ::AbstractMatrix{$elty}=similar(A, $elty, min(size(A)...),
+                                                          size(A, 2));
+                        kwargs...)
+            #! format: on
+            require_one_based_indexing(A, U, Vᴴ, S)
+            chkstride1(A, U, Vᴴ, S)
+            m, n = size(A)
+            m >= n ||
+                throw(ArgumentError("gejsv! requires a matrix with at least as many rows as columns"))
+
+            if length(U) == 0
+                jobu = 'N'
+            else
+                size(U, 1) == m ||
+                    throw(DimensionMismatch("row size mismatch between A and U"))
+                if size(U, 2) == n
+                    jobu = 'U'
                 elseif size(U, 2) == m
-                    jobu = 'A'
+                    jobu = 'F'
                 else
                     throw(DimensionMismatch("invalid column size of U"))
                 end
@@ -1198,14 +1488,8 @@ for (gesvd, gesdd, elty, relty) in
             else
                 size(Vᴴ, 2) == n ||
                     throw(DimensionMismatch("column size mismatch between A and Vᴴ"))
-                if size(Vᴴ, 1) == minmn
-                    if Vᴴ === A
-                        jobvt = 'O'
-                    else
-                        jobvt = 'S'
-                    end
-                elseif size(Vᴴ, 1) == n
-                    jobvt = 'A'
+                if size(Vᴴ, 1) == n
+                    jobvt = 'V'
                 else
                     throw(DimensionMismatch("invalid row size of Vᴴ"))
                 end
@@ -1220,31 +1504,39 @@ for (gesvd, gesdd, elty, relty) in
             lwork = BlasInt(-1)
             cmplx = eltype(A) <: Complex
             if cmplx
-                rwork = Vector{$relty}(undef, 5minmn)
+                rwork = Vector{$relty}(undef, 5 * minmn)
             end
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
                 #! format: off
                 if cmplx
-                    ccall((@blasfunc($gesvd), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    ccall((@blasfunc($gesvdx), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                           Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ref{$relty}, Ref{$relty}, Ref{BlasInt}, Ref{BlasInt}, Ptr{BlasInt},
                            Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty},
-                           Ptr{BlasInt}, Clong, Clong),
-                          jobu, jobvt, m, n, A, lda,
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ptr{BlasInt},
+                           Ptr{BlasInt}, Clong, Clong, Clong),
+                          jobu, jobvt, range,
+                          m, n, A, lda,
+                          vl, vu, il, iu, ns,
                           S, U, ldu, Vᴴ, ldv,
-                          work, lwork, rwork,
-                          info, 1, 1)
+                          work, lwork, rwork, iwork,
+                          info, 1, 1, 1)
                 else
-                    ccall((@blasfunc($gesvd), libblastrampoline), Cvoid,
-                          (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$elty}, Ref{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong),
-                          jobu, jobvt, m, n, A, lda,
+                    ccall((@blasfunc($gesvdx), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
+                           Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ref{$relty}, Ref{$relty}, Ref{BlasInt}, Ref{BlasInt}, Ptr{BlasInt},
+                           Ptr{$relty}, Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                           Ptr{BlasInt}, Clong, Clong, Clong),
+                          jobu, jobvt, range,
+                          m, n, A, lda,
+                          vl, vu, il, iu, ns,
                           S, U, ldu, Vᴴ, ldv,
-                          work, lwork,
-                          info, 1, 1)
+                          work, lwork, iwork,
+                          info, 1, 1, 1)
                 end
                 #! format: on
                 chklapackerror(info[])

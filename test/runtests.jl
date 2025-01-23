@@ -7,9 +7,15 @@ using LinearAlgebra: LinearAlgebra, diag, Diagonal, I, isposdef, diagind
 
 diagview(A) = view(A, diagind(A))
 
-include("qr.jl")
-include("svd.jl")
-# include("eigh.jl")
+@testset "QR Decomposition" verbose = true begin
+    include("qr.jl")
+end
+@testset "Singular Value Decomposition" verbose = true begin
+    include("svd.jl")
+end
+@testset "Hermitian Eigenvalue Decomposition" verbose = true begin
+    include("eigh.jl")
+end
 
 @testset "MatrixAlgebraKit.jl" begin
     @testset "Code quality (Aqua.jl)" begin

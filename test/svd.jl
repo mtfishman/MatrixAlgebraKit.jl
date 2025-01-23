@@ -1,7 +1,9 @@
 @testset "svd_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     m = 54
-    for n in (37, m, 63)
-        for alg in (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
+    @testset "size ($m, $n)" for n in (37, m, 63)
+        @testset "algorithm $alg" for alg in
+                                      (LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
+                                       LAPACK_Bisection())
             A = randn(T, m, n)
             Ac = similar(A)
             U = similar(A, m, min(m, n))
@@ -28,8 +30,9 @@ end
 
 @testset "svd_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     m = 54
-    for n in (37, m, 63)
-        for alg in (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
+    @testset "size ($m, $n)" for n in (37, m, 63)
+        @testset "algorithm $alg" for alg in
+                                      (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
             A = randn(T, m, n)
             Ac = similar(A)
             U = similar(A, m, m)
@@ -55,8 +58,10 @@ end
 
 @testset "svd_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     m = 54
-    for n in (37, m, 63)
-        for alg in (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
+    @testset "size ($m, $n)" for n in (37, m, 63)
+        @testset "algorithm $alg" for alg in
+                                      (LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
+                                       LAPACK_Bisection())
             A = randn(T, m, n)
             Ac = similar(A)
             S₀ = svd_vals!(copy!(Ac, A))
