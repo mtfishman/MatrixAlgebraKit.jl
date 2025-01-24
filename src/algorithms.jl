@@ -1,9 +1,33 @@
+"""
+    abstract type AbstractAlgorithm end
+
+Supertype to dispatch on specific implementations of different the different functions.
+Concrete subtypes should represent both a way to dispatch to a given implementation, as
+well as the configuration of that implementation.
+
+See also [`select_algorithm`](@ref).
+"""
 abstract type AbstractAlgorithm end
 
+"""
+    Algorithm{name,KW} <: AbstractAlgorithm
+
+Bare-bones implementation of an algorithm, where `name` should be a `Symbol` to dispatch on,
+and `KW` is typically a `NamedTuple` indicating the keyword arguments.
+
+See also [`@algdef`](@ref).
+"""
 struct Algorithm{name,K} <: AbstractAlgorithm
     kwargs::K
 end
 
+"""
+    @algdef AlgorithmName
+
+Convenience macro to define an algorithm `AlgorithmName` that accepts generic keywords.
+This defines an exported alias for [`Algorithm{:AlgorithmName}`](@ref Algorithm)
+along with some utility methods.
+"""
 macro algdef(name)
     esc(quote
             const $name{K} = Algorithm{$(QuoteNode(name)),K}
