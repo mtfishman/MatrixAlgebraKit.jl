@@ -1,17 +1,19 @@
-function qr_full!(A::AbstractMatrix, QR=qr_full_init(A); kwargs...)
-    return qr_full!(A, QR, default_algorithm(qr_full!, A; kwargs...))
+# copy input
+function copy_input(::typeof(qr_full), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
 end
-function qr_compact!(A::AbstractMatrix, QR=qr_compact_init(A); kwargs...)
-    return qr_compact!(A, QR, default_algorithm(qr_compact!, A; kwargs...))
+function copy_input(::typeof(qr_compact), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
 end
 
-function qr_full_init(A::AbstractMatrix)
+# initialize output
+function initialize_output(::typeof(qr_full!), A::AbstractMatrix)
     m, n = size(A)
     Q = similar(A, (m, m))
     R = similar(A, (m, n))
     return (Q, R)
 end
-function qr_compact_init(A::AbstractMatrix)
+function initialize_output(::typeof(qr_compact!), A::AbstractMatrix)
     m, n = size(A)
     minmn = min(m, n)
     Q = similar(A, (m, minmn))
@@ -19,6 +21,7 @@ function qr_compact_init(A::AbstractMatrix)
     return (Q, R)
 end
 
+# select default algorithm
 function default_algorithm(::typeof(qr_full!), A::AbstractMatrix; kwargs...)
     return default_qr_algorithm(A; kwargs...)
 end
@@ -30,7 +33,8 @@ function default_qr_algorithm(A::StridedMatrix{T}; kwargs...) where {T<:BlasFloa
     return LAPACK_HouseholderQR(; kwargs...)
 end
 
-function check_qr_full_input(A::AbstractMatrix, QR)
+# check input
+function check_input(::typeof(qr_full!), A::AbstractMatrix, QR)
     m, n = size(A)
     Q, R = QR
     (Q isa AbstractMatrix && eltype(Q) == eltype(A) && size(Q) == (m, m)) ||
@@ -39,7 +43,7 @@ function check_qr_full_input(A::AbstractMatrix, QR)
         throw(DimensionMismatch("Upper triangular matrix `R` must have size equal to A"))
     return nothing
 end
-function check_qr_compact_input(A::AbstractMatrix, QR)
+function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR)
     m, n = size(A)
     if n <= m
         Q, R = QR
@@ -49,23 +53,23 @@ function check_qr_compact_input(A::AbstractMatrix, QR)
          (isempty(R) || size(R) == (n, n))) ||
             throw(DimensionMismatch("Upper triangular matrix `R` must be square with equal number of columns as A"))
     else
-        check_qr_full_input(A, QR)
+        check_input(qr_full!, A, QR)
     end
 end
 
+# actual implementation
 function qr_full!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
-    check_qr_full_input(A, QR)
+    check_input(qr_full!, A, QR)
     Q, R = QR
     _lapack_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
 function qr_compact!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
-    check_qr_compact_input(A, QR)
+    check_input(qr_compact!, A, QR)
     Q, R = QR
     _lapack_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
-
 function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
                      positive=false,
                      pivoted=false,

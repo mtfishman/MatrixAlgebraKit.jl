@@ -3,35 +3,32 @@ function eigh!(A::AbstractMatrix, args...; kwargs...)
     return eigh_full!(A, args...; kwargs...)
 end
 
-function eigh_full!(A::AbstractMatrix, DV=eigh_full_init(A); kwargs...)
-    return eigh_full!(A, DV, default_algorithm(eigh_full!, A; kwargs...))
+# copy input
+function copy_input(::typeof(eigh_full), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
 end
-function eigh_vals!(A::AbstractMatrix, D=eigh_vals_init(A); kwargs...)
-    return eigh_vals!(A, D, default_algorithm(eigh_vals!, A; kwargs...))
-end
-function eigh_trunc!(A::AbstractMatrix, trunc::TruncationStrategy; kwargs...)
-    return eigh_trunc!(A, default_algorithm(eigh_trunc!, A; kwargs...), trunc)
+function copy_input(::typeof(eigh_vals), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
 end
 
-function eigh_full_init(A::AbstractMatrix)
+# initialize output
+function initialize_output(::typeof(eigh_full!), A::AbstractMatrix)
     n = size(A, 1) # square check will happen later
     D = Diagonal(similar(A, real(eltype(A)), n))
     V = similar(A, (n, n))
     return (D, V)
 end
-function eigh_vals_init(A::AbstractMatrix)
+function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix)
     n = size(A, 1) # square check will happen later
     D = similar(A, real(eltype(A)), n)
     return D
 end
 
+# select default algorithm
 function default_algorithm(::typeof(eigh_full!), A::AbstractMatrix; kwargs...)
     return default_eigh_algorithm(A; kwargs...)
 end
 function default_algorithm(::typeof(eigh_vals!), A::AbstractMatrix; kwargs...)
-    return default_eigh_algorithm(A; kwargs...)
-end
-function default_algorithm(::typeof(eigh_trunc!), A::AbstractMatrix; kwargs...)
     return default_eigh_algorithm(A; kwargs...)
 end
 
@@ -39,7 +36,8 @@ function default_eigh_algorithm(A::StridedMatrix{T}; kwargs...) where {T<:BlasFl
     return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
 end
 
-function check_eigh_full_input(A::AbstractMatrix, DV)
+# check input
+function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV)
     m, n = size(A)
     m == n || throw(ArgumentError("Eigenvalue decompsition requires square input matrix"))
     D, V = DV
@@ -49,7 +47,7 @@ function check_eigh_full_input(A::AbstractMatrix, DV)
         throw(ArgumentError("`eigh_full!` requires Diagonal matrix D with same size as A with a real `eltype`"))
     return nothing
 end
-function check_eigh_vals_input(A::AbstractMatrix, D)
+function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D)
     m, n = size(A)
     m == n || throw(ArgumentError("Eigenvalue decompsition requires square input matrix"))
     (size(D) == (n,) && eltype(D) == real(eltype(A))) ||
@@ -57,8 +55,9 @@ function check_eigh_vals_input(A::AbstractMatrix, D)
     return nothing
 end
 
+# actual implementation
 function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
-    check_eigh_full_input(A, DV)
+    check_input(eigh_full!, A, DV)
     D, V = DV
     Dd = D.diag
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
@@ -74,7 +73,7 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
 end
 
 function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
-    check_eigh_vals_input(A, D)
+    check_input(eigh_vals!, A, D)
     V = similar(A, (size(A, 1), 0))
     if alg isa LAPACK_MultipleRelativelyRobustRepresentations
         YALAPACK.heevr!(A, D, V; alg.kwargs...)
@@ -89,14 +88,18 @@ function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
 end
 
 # for eigh_trunc!, it doesn't make sense to preallocate D and V as we don't know their sizes
-function eigh_trunc!(A::AbstractMatrix, alg::LAPACK_EighAlgorithm,
-                     trunc::TruncationStrategy)
-    DV = eigh_full_init(A)
-    D, V = eigh_full!(A, DV, alg)
+# function default_algorithm(::typeof(eigh_trunc!), A::AbstractMatrix; kwargs...)
+#     return default_eigh_algorithm(A; kwargs...)
+# end
 
-    Dd = D.diag
-    ind = findtruncated(Dd, trunc)
-    V′ = V[:, ind]
-    D′ = Diagonal(Dd[ind])
-    return (D′, V′)
-end
+# function eigh_trunc!(A::AbstractMatrix, alg::LAPACK_EighAlgorithm,
+#                      trunc::TruncationStrategy)
+#     DV = eigh_full_init(A)
+#     D, V = eigh_full!(A, DV, alg)
+
+#     Dd = D.diag
+#     ind = findtruncated(Dd, trunc)
+#     V′ = V[:, ind]
+#     D′ = Diagonal(Dd[ind])
+#     return (D′, V′)
+# end
