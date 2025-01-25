@@ -31,6 +31,28 @@ Base.propertynames(alg::Algorithm) = (:kwargs, propertynames(getfield(alg, :kwar
     return f === :kwargs ? kwargs : getproperty(kwargs, f)
 end
 
+# TODO: do we want to simply define this for all `Algorithm{N,<:NamedTuple}`?
+# need print to make strings/symbols parseable,
+# show to make objects parseable
+function _show_alg(io::IO, alg::Algorithm)
+    print(io, name(alg))
+    print(io, "(")
+    properties = propertynames(alg)
+    next = iterate(properties)
+    isnothing(next) && return print(io, ")")
+    f, state = next
+    print(io, "; ", f, "=")
+    show(io, getproperty(alg, f))
+    next = iterate(properties, state)
+    while !isnothing(next)
+        f, state = next
+        print(io, ", ", f, "=")
+        show(io, getproperty(alg, f))
+        next = iterate(properties, state)
+    end
+    return print(io, ")")
+end
+
 """
     @algdef AlgorithmName
 
@@ -47,19 +69,8 @@ macro algdef(name)
                 kw = NamedTuple(kwargs) # normalize type
                 return $name{typeof(kw)}(kw)
             end
-            function Base.print(io::IO, alg::$name)
-                print(io, $name, "(")
-                next = iterate(alg.kwargs)
-                isnothing(next) && return print(io, ")")
-                (k, v), state = next
-                print(io, "; ", string(k), "=", string(v))
-                next = iterate(alg.kwargs, state)
-                while !isnothing(next)
-                    (k, v), state = next
-                    print(io, ", ", string(k), "=", string(v))
-                    next = iterate(alg.kwargs, state)
-                end
-                return print(io, ")")
+            function Base.show(io::IO, alg::$name)
+                return _show_alg(io, alg)
             end
         end)
 end
