@@ -74,3 +74,44 @@ macro algdef(name)
             end
         end)
 end
+
+"""
+    @functiondef f
+
+Convenience macro to define the boilerplate code that dispatches between several versions of `f` and `f!`.
+By default, this enables the following signatures to be defined in terms of
+the final `f!(A, out, alg::Algorithm)`.
+
+```julia
+    f(A; kwargs...)
+    f(A, alg::Algorithm)
+    f!(A, [out]; kwargs...)
+    f!(A, alg::Algorithm)
+```
+
+See also [`copy_input`](@ref), [`select_algorithm`](@ref) and [`initialize_output`](@ref).
+"""
+macro functiondef(f)
+    f isa Symbol || throw(ArgumentError("Unsupported usage of `@functiondef`"))
+    f! = Symbol(f, :!)
+
+    return esc(quote
+                   # out of place to inplace
+                   $f(A; kwargs...) = $f!(copy_input($f, A); kwargs...)
+                   $f(A, alg::AbstractAlgorithm) = $f!(copy_input($f, A), alg)
+
+                   # fill in arguments
+                   $f!(A; kwargs...) = $f!(A, select_algorithm($f!, A; kwargs...))
+                   function $f!(A, out; kwargs...)
+                       return $f!(A, out, select_algorithm($f!, A; kwargs...))
+                   end
+                   function $f!(A, alg::AbstractAlgorithm)
+                       return $f!(A, initialize_output($f!, A, alg), alg)
+                   end
+
+                   # copy documentation to both functions
+                   Core.@__doc__ $f, $f!
+
+                   export $f, $f!
+               end)
+end
