@@ -1,6 +1,13 @@
 abstract type TruncationStrategy end
 
 """
+    NoTruncation()
+
+Trivial truncation strategy that keeps all values, mostly for testing purposes.
+"""
+struct NoTruncation <: TruncationStrategy end
+
+"""
     TruncationKeepSorted(howmany::Int, sortby::Function, rev::Bool)
 
 Truncation strategy to keep the first `howmany` values when sorted according to `sortby` or the last `howmany` if `rev` is true.
@@ -23,6 +30,11 @@ end
 # TODO: better names for these functions of the above types
 truncrank(howmany::Int, by=abs, rev=true) = TruncationKeepSorted(howmany, by, rev)
 trunctol(atol) = TruncationKeepFiltered(>=(atol))
+
+# TODO: should we return a view?
+function truncate!((U, S, Vᴴ)::Tuple{Vararg{AbstractMatrix,3}}, ind)
+    return U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]
+end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepSorted)
     sorted = sortperm(values; by=strategy.sortby, rev=strategy.rev)
