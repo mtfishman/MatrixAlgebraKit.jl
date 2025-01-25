@@ -39,16 +39,16 @@ function initialize_output(::typeof(svd_vals!), A::AbstractMatrix)
 end
 
 # select default algorithm
-function default_algorithm(::typeof(svd_full!), A; kwargs...)
+function select_algorithm(::typeof(svd_full!), A; kwargs...)
     return default_svd_algorithm(A; kwargs...)
 end
-function default_algorithm(::typeof(svd_compact!), A; kwargs...)
+function select_algorithm(::typeof(svd_compact!), A; kwargs...)
     return default_svd_algorithm(A; kwargs...)
 end
-function default_algorithm(::typeof(svd_vals!), A; kwargs...)
+function select_algorithm(::typeof(svd_vals!), A; kwargs...)
     return default_svd_algorithm(A; kwargs...)
 end
-function default_algorithm(::typeof(svd_null!), A; kwargs...)
+function select_algorithm(::typeof(svd_null!), A; kwargs...)
     return default_svd_algorithm(A; kwargs...)
 end
 
@@ -171,7 +171,7 @@ function svd_null!(A::AbstractMatrix, alg::LAPACK_SVDAlgorithm; atol)
 end
 
 # for svd_trunc!, it doesn't make sense to preallocate U, S, Vᴴ as we don't know their sizes
-# function default_algorithm(::typeof(svd_trunc!), A; kwargs...)
+# function select_algorithm(::typeof(svd_trunc!), A; kwargs...)
 #     return default_svd_algorithm(A; kwargs...)
 # end
 

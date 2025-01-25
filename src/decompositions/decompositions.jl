@@ -27,7 +27,7 @@ for f in _DECOMPOSITION_LIST
     #         return $f!(A, out; kwargs...)
     #     end
     #     function $f!(A, out; kwargs...)
-    #         alg = default_algorithm($f!, A; kwargs...)
+    #         alg = select_algorithm($f!, A; kwargs...)
     #         return $f!(A, out, alg)
     #     end
     #     function $f!(A, alg::Algorithm)

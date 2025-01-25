@@ -27,10 +27,10 @@ function initialize_output(::typeof(eig_vals!), A::AbstractMatrix)
 end
 
 # select default algorithm
-function default_algorithm(::typeof(eig_full!), A::AbstractMatrix; kwargs...)
+function select_algorithm(::typeof(eig_full!), A::AbstractMatrix; kwargs...)
     return default_eig_algorithm(A; kwargs...)
 end
-function default_algorithm(::typeof(eig_vals!), A::AbstractMatrix; kwargs...)
+function select_algorithm(::typeof(eig_vals!), A::AbstractMatrix; kwargs...)
     return default_eig_algorithm(A; kwargs...)
 end
 
@@ -86,7 +86,7 @@ function eig_vals!(A::AbstractMatrix, D, alg::LAPACK_EigAlgorithm)
 end
 
 # # for eig_trunc!, it doesn't make sense to preallocate D and V as we don't know their sizes
-# function default_algorithm(::typeof(eig_trunc!), A::AbstractMatrix; kwargs...)
+# function select_algorithm(::typeof(eig_trunc!), A::AbstractMatrix; kwargs...)
 #     return default_eig_algorithm(A; kwargs...)
 # end
 

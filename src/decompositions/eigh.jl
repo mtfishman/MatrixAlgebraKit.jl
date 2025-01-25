@@ -25,10 +25,10 @@ function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix)
 end
 
 # select default algorithm
-function default_algorithm(::typeof(eigh_full!), A::AbstractMatrix; kwargs...)
+function select_algorithm(::typeof(eigh_full!), A::AbstractMatrix; kwargs...)
     return default_eigh_algorithm(A; kwargs...)
 end
-function default_algorithm(::typeof(eigh_vals!), A::AbstractMatrix; kwargs...)
+function select_algorithm(::typeof(eigh_vals!), A::AbstractMatrix; kwargs...)
     return default_eigh_algorithm(A; kwargs...)
 end
 
@@ -88,7 +88,7 @@ function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
 end
 
 # for eigh_trunc!, it doesn't make sense to preallocate D and V as we don't know their sizes
-# function default_algorithm(::typeof(eigh_trunc!), A::AbstractMatrix; kwargs...)
+# function select_algorithm(::typeof(eigh_trunc!), A::AbstractMatrix; kwargs...)
 #     return default_eigh_algorithm(A; kwargs...)
 # end
 

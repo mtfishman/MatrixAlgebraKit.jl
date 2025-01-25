@@ -30,10 +30,10 @@ function schur_vals_init(A::AbstractMatrix)
 end
 
 # select default algorithm
-function default_algorithm(::typeof(schur_full!), A::AbstractMatrix; kwargs...)
+function select_algorithm(::typeof(schur_full!), A::AbstractMatrix; kwargs...)
     return default_schur_algorithm(A; kwargs...)
 end
-function default_algorithm(::typeof(schur_vals!), A::AbstractMatrix; kwargs...)
+function select_algorithm(::typeof(schur_vals!), A::AbstractMatrix; kwargs...)
     return default_schur_algorithm(A; kwargs...)
 end
 
@@ -91,7 +91,7 @@ function schur_vals!(A::AbstractMatrix, vals, alg::LAPACK_EigAlgorithm)
 end
 
 # # for schur_trunc!, it doesn't make sense to preallocate D and V as we don't know their sizes
-# function default_algorithm(::typeof(schur_trunc!), A::AbstractMatrix; kwargs...)
+# function select_algorithm(::typeof(schur_trunc!), A::AbstractMatrix; kwargs...)
 #     return default_schur_algorithm(A; kwargs...)
 # end
 

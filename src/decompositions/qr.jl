@@ -22,10 +22,10 @@ function initialize_output(::typeof(qr_compact!), A::AbstractMatrix)
 end
 
 # select default algorithm
-function default_algorithm(::typeof(qr_full!), A::AbstractMatrix; kwargs...)
+function select_algorithm(::typeof(qr_full!), A::AbstractMatrix; kwargs...)
     return default_qr_algorithm(A; kwargs...)
 end
-function default_algorithm(::typeof(qr_compact!), A::AbstractMatrix; kwargs...)
+function select_algorithm(::typeof(qr_compact!), A::AbstractMatrix; kwargs...)
     return default_qr_algorithm(A; kwargs...)
 end
 
