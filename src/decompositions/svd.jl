@@ -88,6 +88,11 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact),
 """
 @functiondef svd_vals
 
+# Default to LAPACK sdd for `StridedMatrix{<:BlasFloat}`
+function default_svd_algorithm(A::StridedMatrix{T}; kwargs...) where {T<:BlasFloat}
+    return LAPACK_DivideAndConquer(; kwargs...)
+end
+
 # copy input
 function copy_input(::typeof(svd_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
@@ -103,15 +108,14 @@ function copy_input(::typeof(svd_vals), A::AbstractMatrix)
 end
 
 # initialize output
-function initialize_output(::typeof(svd_full!), A::AbstractMatrix)
+function initialize_output(::typeof(svd_full!), A::AbstractMatrix, ::LAPACK_SVDAlgorithm)
     m, n = size(A)
-    minmn = min(m, n)
     U = similar(A, (m, m))
     S = similar(A, real(eltype(A)), (m, n))
     Vᴴ = similar(A, (n, n))
     return (U, S, Vᴴ)
 end
-function initialize_output(::typeof(svd_compact!), A::AbstractMatrix)
+function initialize_output(::typeof(svd_compact!), A::AbstractMatrix, ::LAPACK_SVDAlgorithm)
     m, n = size(A)
     minmn = min(m, n)
     U = similar(A, (m, minmn))
@@ -119,7 +123,7 @@ function initialize_output(::typeof(svd_compact!), A::AbstractMatrix)
     Vᴴ = similar(A, (minmn, n))
     return (U, S, Vᴴ)
 end
-function initialize_output(::typeof(svd_vals!), A::AbstractMatrix)
+function initialize_output(::typeof(svd_vals!), A::AbstractMatrix, ::LAPACK_SVDAlgorithm)
     return similar(A, real(eltype(A)), (min(size(A)...),))
 end
 
@@ -137,14 +141,9 @@ function select_algorithm(::typeof(svd_null!), A; kwargs...)
     return default_svd_algorithm(A; kwargs...)
 end
 
-function default_svd_algorithm(A::StridedMatrix{T}; kwargs...) where {T<:BlasFloat}
-    return LAPACK_DivideAndConquer(; kwargs...)
-end
-
 # check input
 function check_input(::typeof(svd_full!), A::AbstractMatrix, USVᴴ)
     m, n = size(A)
-    minmn = min(m, n)
     U, S, Vᴴ = USVᴴ
     (U isa AbstractMatrix && eltype(U) == eltype(A) && size(U) == (m, m)) ||
         throw(ArgumentError("`svd_full!` requires square U matrix with equal number of rows and same `eltype` as A"))
@@ -247,7 +246,7 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
 end
 function svd_null!(A::AbstractMatrix, alg::LAPACK_SVDAlgorithm; atol)
     m, n = size(A)
-    USVᴴ = svd_full!(A, alg)
+    _, _, Vᴴ = svd_full!(A, alg)
     i = findfirst(<=(atol), diag(S))
     if isnothing(i)
         i = min(m, n) + 1
