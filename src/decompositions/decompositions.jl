@@ -1,7 +1,6 @@
 # TODO: module Decompositions?
 
 const _DECOMPOSITION_LIST = (:qr_full, :qr_compact,
-                             :svd_full, :svd_compact, :svd_vals, :svd_null,
                              :eigh_full, :eigh_vals,
                              :eig_full, :eig_vals,
                              :schur_full, :schur_vals)
