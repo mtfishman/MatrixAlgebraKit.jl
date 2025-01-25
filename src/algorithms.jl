@@ -20,6 +20,16 @@ See also [`@algdef`](@ref).
 struct Algorithm{name,K} <: AbstractAlgorithm
     kwargs::K
 end
+name(alg::Algorithm) = name(typeof(alg))
+name(::Type{<:Algorithm{N}}) where {N} = N
+
+# TODO: do we want to restrict this to Algorithm{name,<:NamedTuple}?
+# Pretend like kwargs are part of the properties of the algorithm
+Base.propertynames(alg::Algorithm) = (:kwargs, propertynames(getfield(alg, :kwargs))...)
+@inline function Base.getproperty(alg::Algorithm, f::Symbol)
+    kwargs = getfield(alg, :kwargs)
+    return f === :kwargs ? kwargs : getproperty(kwargs, f)
+end
 
 """
     @algdef AlgorithmName
@@ -33,7 +43,9 @@ macro algdef(name)
             const $name{K} = Algorithm{$(QuoteNode(name)),K}
             export $name
             function $name(; kwargs...)
-                return $name{typeof(kwargs)}(kwargs)
+                # TODO: is this necessary/useful?
+                kw = NamedTuple(kwargs) # normalize type
+                return $name{typeof(kw)}(kw)
             end
             function Base.print(io::IO, alg::$name)
                 print(io, $name, "(")
