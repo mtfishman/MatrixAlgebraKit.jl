@@ -1,6 +1,8 @@
 # Eigh functions
 # --------------
 
+# TODO: kwargs for sorting eigenvalues?
+
 docs_eigh_note = """
 Note that `eigh` and its variants assume additional structure on the input,
 and therefore will retain the `eltype` of the input for the eigenvalues and eigenvectors.

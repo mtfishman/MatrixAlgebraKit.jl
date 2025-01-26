@@ -1,5 +1,8 @@
 # Eig functions
 # -------------
+
+# TODO: kwargs for sorting eigenvalues?
+
 docs_eig_note = """
 Note that `eig` and its variants do not assume additional structure on the input,
 and therefore will always return complex eigenvalues and eigenvectors. For real
