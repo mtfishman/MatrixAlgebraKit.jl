@@ -134,21 +134,34 @@ function eig_vals!(A::AbstractMatrix, D, alg::LAPACK_EigAlgorithm)
     else # alg isa LAPACK_Expert
         YALAPACK.geevx!(A, D, V; alg.kwargs...)
     end
-    return D, V
+    return D
 end
 
-# # for eig_trunc!, it doesn't make sense to preallocate D and V as we don't know their sizes
-# function select_algorithm(::typeof(eig_trunc!), A::AbstractMatrix; kwargs...)
-#     return default_eig_algorithm(A; kwargs...)
-# end
+"""
+    TruncatedDenseEig(eig_alg, trunc_alg)
 
-# function eig_trunc!(A::AbstractMatrix, alg::LAPACK_EigAlgorithm, trunc::TruncationStrategy)
-#     DV = eig_full_init(A)
-#     D, V = eig_full!(A, DV, alg)
+Algorithm for computing a truncated eigenvalue decomposition by first computing
+a regular decomposition, followed by a truncation step.
 
-#     Dd = D.diag
-#     ind = findtruncated(Dd, trunc)
-#     V′ = V[:, ind]
-#     D′ = Diagonal(Dd[ind])
-#     return (D′, V′)
-# end
+See also [`eig_trunc(!)`](@ref eig_trunc) and [`TruncationStrategy`](@ref).
+"""
+struct TruncatedDenseEig{A<:AbstractAlgorithm,T<:TruncationStrategy} <: AbstractAlgorithm
+    eig_alg::A
+    trunc_alg::T
+end
+export TruncatedDenseEig
+
+function eig_trunc!(A::AbstractMatrix, DV, alg::TruncatedDenseEig)
+    D, V = eig_full!(A, DV, alg.eig_alg)
+    ind = findtruncated(diagview(D), alg.trunc_alg)
+    return truncate!((D, V), ind)
+end
+
+copy_input(::typeof(eig_trunc), A) = copy_input(eig_full, A)
+
+function select_algorithm(::typeof(eig_trunc!), A::AbstractMatrix; kwargs...)
+    return TruncatedDenseEig(default_eig_algorithm(A; kwargs...), NoTruncation())
+end
+function initialize_output(::typeof(eig_trunc!), A::AbstractMatrix, alg::TruncatedDenseEig)
+    return initialize_output(eig_full!, A, alg.eig_alg)
+end

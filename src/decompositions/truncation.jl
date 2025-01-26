@@ -29,13 +29,18 @@ end
 
 # TODO: better names for these functions of the above types
 truncrank(howmany::Int, by=abs, rev=true) = TruncationKeepSorted(howmany, by, rev)
-trunctol(atol) = TruncationKeepFiltered(>=(atol))
+trunctol(atol) = TruncationKeepFiltered(≥(atol) ∘ abs)
 
 # TODO: should we return a view?
 function truncate!((U, S, Vᴴ)::Tuple{Vararg{AbstractMatrix,3}}, ind)
     return U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]
 end
+function truncate!((D, V)::Tuple{Vararg{AbstractMatrix,2}}, ind)
+    return Diagonal(diagview(D)[ind]), V[ind, :]
+end
 
+# TODO: this may also permute the eigenvalues, decide if we want to allow this or not
+# can be solved by going to logical indexing instead
 function findtruncated(values::AbstractVector, strategy::TruncationKeepSorted)
     sorted = sortperm(values; by=strategy.sortby, rev=strategy.rev)
     howmany = min(strategy.howmany, length(sorted))
