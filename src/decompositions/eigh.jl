@@ -140,17 +140,18 @@ function eigh_vals!(A::AbstractMatrix, D, alg::LAPACK_EighAlgorithm)
     return D
 end
 
-function eigh_trunc!(A::AbstractMatrix, DV, alg::TruncatedDenseEig)
-    D, V = eigh_full!(A, DV, alg.eig_alg)
-    ind = findtruncated(diagview(D), alg.trunc_alg)
+function eigh_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
+    D, V = eigh_full!(A, DV, alg.alg)
+    ind = findtruncated(diagview(D), alg.trunc)
     return truncate!((D, V), ind)
 end
 
 copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
 
 function select_algorithm(::typeof(eigh_trunc!), A::AbstractMatrix; kwargs...)
-    return TruncatedDenseEig(default_eigh_algorithm(A; kwargs...), NoTruncation())
+    return TruncatedAlgorithm(default_eigh_algorithm(A; kwargs...), NoTruncation())
 end
-function initialize_output(::typeof(eigh_trunc!), A::AbstractMatrix, alg::TruncatedDenseEig)
-    return initialize_output(eigh_full!, A, alg.eig_alg)
+function initialize_output(::typeof(eigh_trunc!), A::AbstractMatrix,
+                           alg::TruncatedAlgorithm)
+    return initialize_output(eigh_full!, A, alg.alg)
 end

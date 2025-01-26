@@ -254,31 +254,16 @@ function svd_null!(A::AbstractMatrix, alg::LAPACK_SVDAlgorithm; atol)
     return Vᴴ[i:end, :]'
 end
 
-# TODO: figure out a name
-"""
-    TruncatedDenseSVD(svd_alg, trunc_alg)
-
-Algorithm for computing a truncated singular value decomposition by first computing
-a regular SVD, followed by a truncation step.
-
-See also [`svd_trunc(!)`](@ref svd_trunc) and [`TruncationStrategy`](@ref).
-"""
-struct TruncatedDenseSVD{A<:AbstractAlgorithm,T<:TruncationStrategy} <: AbstractAlgorithm
-    svd_alg::A
-    trunc_alg::T
-end
-export TruncatedDenseSVD
-
-function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedDenseSVD)
-    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.svd_alg)
-    ind = findtruncated(diagview(S), alg.trunc_alg)
+function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
+    U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)
+    ind = findtruncated(diagview(S), alg.trunc)
     return truncate!((U, S, Vᴴ), ind)
 end
 
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
 function select_algorithm(::typeof(svd_trunc!), A; kwargs...)
-    return TruncatedDenseSVD(default_svd_algorithm(A; kwargs...), NoTruncation())
+    return TruncatedAlgorithm(default_svd_algorithm(A; kwargs...), NoTruncation())
 end
-function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedDenseSVD)
-    return initialize_output(svd_compact!, A, alg.svd_alg)
+function initialize_output(::typeof(svd_trunc!), A::AbstractMatrix, alg::TruncatedAlgorithm)
+    return initialize_output(svd_compact!, A, alg.alg)
 end

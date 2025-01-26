@@ -40,12 +40,12 @@ end
         r = m - 2
         s = 1 + sqrt(eps(real(T)))
 
-        alg1 = TruncatedDenseEig(alg, truncrank(r))
+        alg1 = TruncatedAlgorithm(alg, truncrank(r))
         D, V = @constinferred eigh_trunc(A, alg1)
         @test length(diagview(D)) == r
         @test LinearAlgebra.opnorm(A - V * D * V') ≈ D₀[r + 1]
 
-        alg2 = TruncatedDenseEig(alg, trunctol(s * D₀[r + 1]))
+        alg2 = TruncatedAlgorithm(alg, trunctol(s * D₀[r + 1]))
         D, V = @constinferred eigh_trunc(A, alg2)
         @test length(diagview(D)) == r
 

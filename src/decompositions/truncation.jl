@@ -52,3 +52,15 @@ function findtruncated(values::AbstractVector, strategy::TruncationKeepFiltered)
     ind = findall(strategy.filter, values)
     return ind
 end
+
+"""
+    TruncatedAlgorithm(alg::AbstractAlgorithm, trunc::TruncationAlgorithm)
+
+Generic wrapper type for algorithms that consist of first using `alg`, followed by a
+truncation through `trunc`.
+"""
+struct TruncatedAlgorithm{A,T} <: AbstractAlgorithm
+    alg::A
+    trunc::T
+end
+export TruncatedAlgorithm

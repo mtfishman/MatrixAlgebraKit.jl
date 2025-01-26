@@ -70,7 +70,7 @@ end
             minmn = min(m, n)
             r = minmn - 2
             trunc1 = truncrank(r)
-            alg1 = TruncatedDenseSVD(alg, trunc1)
+            alg1 = TruncatedAlgorithm(alg, trunc1)
 
             U1, S1, V1ᴴ = @constinferred svd_trunc!(copy!(Ac, A), alg1)
             @test length(S1.diag) == r
@@ -78,7 +78,7 @@ end
 
             s = 1 + sqrt(eps(real(T)))
             trunc2 = trunctol(s * S₀[r + 1])
-            alg2 = TruncatedDenseSVD(alg, trunc2)
+            alg2 = TruncatedAlgorithm(alg, trunc2)
 
             U2, S2, V2ᴴ = @constinferred svd_trunc!(copy!(Ac, A), alg2)
             @test length(S2.diag) == r

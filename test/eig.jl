@@ -26,14 +26,14 @@ end
         rmin = findfirst(i -> abs(D₀[end - i]) != abs(D₀[end - i - 1]), 1:(m - 2))
         r = length(D₀) - rmin
         trunc1 = truncrank(r)
-        alg1 = TruncatedDenseEig(alg, trunc1)
+        alg1 = TruncatedAlgorithm(alg, trunc1)
 
         D1, V1 = @constinferred eig_trunc(A, alg1)
         @test length(D1.diag) == r
 
         s = 1 + sqrt(eps(real(T)))
         trunc2 = trunctol(s * abs(D₀[r + 1]))
-        alg2 = TruncatedDenseEig(alg, trunc2)
+        alg2 = TruncatedAlgorithm(alg, trunc2)
 
         D2, V2 = @constinferred eig_trunc(A, alg2)
         @test length(D2.diag) == r
