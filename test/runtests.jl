@@ -1,6 +1,7 @@
 using MatrixAlgebraKit
 using Test
 using TestExtras
+using StableRNGs
 using Aqua
 using JET
 using LinearAlgebra: LinearAlgebra, diag, Diagonal, I, isposdef, diagind

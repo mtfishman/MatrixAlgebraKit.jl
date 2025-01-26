@@ -1,7 +1,8 @@
 @testset "qr_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
-        A = randn(T, m, n)
+        A = randn(rng, T, m, n)
         Ac = similar(A)
         Q = similar(A, m, min(m, n))
         R = similar(A, min(m, n), n)
@@ -67,9 +68,10 @@
 end
 
 @testset "qr_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
-        A = randn(T, m, n)
+        A = randn(rng, T, m, n)
         Ac = similar(A)
         Q = similar(A, m, m)
         R = similar(A)

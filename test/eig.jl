@@ -1,7 +1,8 @@
 @testset "eig_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_Simple(), LAPACK_Expert())
-        A = randn(T, m, m)
+        A = randn(rng, T, m, m)
         Ac = similar(A)
         Tc = complex(T)
         V = similar(A, Tc)
@@ -17,9 +18,10 @@
 end
 
 @testset "eig_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_Simple(), LAPACK_Expert())
-        A = randn(T, m, m)
+        A = randn(rng, T, m, m)
         A *= A' # TODO: deal with eigenvalue ordering etc
         # eigenvalues are sorted by ascending real component...
         D₀ = sort!(eig_vals(A); by=abs, rev=true)

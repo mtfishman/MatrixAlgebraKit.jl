@@ -1,11 +1,12 @@
 @testset "svd_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63)
         @testset "algorithm $alg" for alg in
                                       (LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
                                        LAPACK_Bisection(), LAPACK_Jacobi())
             n > m && alg isa LAPACK_Jacobi && continue # not supported
-            A = randn(T, m, n)
+            A = randn(rng, T, m, n)
             Ac = similar(A)
             U = similar(A, m, min(m, n))
             Vᴴ = similar(A, min(m, n), n)
@@ -30,11 +31,12 @@
 end
 
 @testset "svd_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63)
         @testset "algorithm $alg" for alg in
                                       (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
-            A = randn(T, m, n)
+            A = randn(rng, T, m, n)
             Ac = similar(A)
             U = similar(A, m, m)
             Vᴴ = similar(A, n, n)
@@ -58,13 +60,14 @@ end
 end
 
 @testset "svd_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63)
         @testset "algorithm $alg" for alg in
                                       (LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
                                        LAPACK_Bisection(), LAPACK_Jacobi())
             n > m && alg isa LAPACK_Jacobi && continue # not supported
-            A = randn(T, m, n)
+            A = randn(rng, T, m, n)
             Ac = similar(A)
             S₀ = svd_vals!(copy!(Ac, A))
             minmn = min(m, n)

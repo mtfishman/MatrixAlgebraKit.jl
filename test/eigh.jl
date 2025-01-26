@@ -1,10 +1,11 @@
 @testset "eigh_full! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_MultipleRelativelyRobustRepresentations(),
                 LAPACK_DivideAndConquer(),
                 LAPACK_QRIteration(),
                 LAPACK_Bisection())
-        A = randn(T, m, m)
+        A = randn(rng, T, m, m)
         A = (A + A') / 2
         Ac = similar(A)
         V = similar(A)
@@ -27,12 +28,13 @@
 end
 
 @testset "eigh_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+    rng = StableRNG(123)
     m = 54
     for alg in (LAPACK_QRIteration(),
                 LAPACK_Bisection(),
                 LAPACK_DivideAndConquer(),
                 LAPACK_MultipleRelativelyRobustRepresentations())
-        A = randn(T, m, m)
+        A = randn(rng, T, m, m)
         A = A * A'
         A = (A + A') / 2
         Ac = similar(A)
