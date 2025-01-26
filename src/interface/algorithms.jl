@@ -37,7 +37,7 @@ end
 function _show_alg(io::IO, alg::Algorithm)
     print(io, name(alg))
     print(io, "(")
-    properties = propertynames(alg)
+    properties = filter(!=(:kwargs), propertynames(alg))
     next = iterate(properties)
     isnothing(next) && return print(io, ")")
     f, state = next

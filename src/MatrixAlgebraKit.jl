@@ -12,7 +12,8 @@ export truncrank, trunctol, TruncationKeepSorted, TruncationKeepFiltered
 
 include("auxiliary.jl")
 include("yalapack.jl")
-include("algorithms.jl")
+include("interface/algorithms.jl")
+include("interface/svd.jl")
 include("decompositions/decompositions.jl")
 include("decompositions/truncation.jl")
 include("decompositions/qr.jl")

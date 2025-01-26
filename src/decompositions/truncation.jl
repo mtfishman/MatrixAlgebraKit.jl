@@ -1,5 +1,16 @@
 abstract type TruncationStrategy end
 
+function TruncationStrategy(; atol=nothing, rtol=nothing, maxrank=nothing)
+    if isnothing(maxrank) && isnothing(atol) && isnothing(rtol)
+        return NoTruncation()
+    elseif isnothing(maxrank)
+        @assert isnothing(rtol) "TODO: rtol"
+        return trunctol(atol)
+    else
+        return truncrank(maxrank)
+    end
+end
+
 """
     NoTruncation()
 
