@@ -2,7 +2,6 @@
 
 const _DECOMPOSITION_LIST = (:qr_full, :qr_compact,
                              :eigh_full, :eigh_vals,
-                             :eig_full, :eig_vals,
                              :schur_full, :schur_vals)
 
 function copy_input end
