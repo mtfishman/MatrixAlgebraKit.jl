@@ -5,91 +5,16 @@ function eigh!(A::AbstractMatrix, args...; kwargs...)
     return eigh_full!(A, args...; kwargs...)
 end
 
-docs_eigh_note = """
-Note that `eigh` and its variants assume additional structure on the input,
-and therefore will retain the `eltype` of the input for the eigenvalues and eigenvectors.
-For generic eigenvalue decompositions, see [`eig`](@ref).
-"""
-
-# TODO: do we need "full"?
-"""
-    eigh_full(A; kwargs...) -> D, V
-    eigh_full(A, alg::AbstractAlgorithm) -> D, V
-    eigh_full!(A, [DV]; kwargs...) -> D, V
-    eigh_full!(A, [DV], alg::AbstractAlgorithm) -> D, V
-
-Compute the symmetric or hermitian eigenvalue decomposition of `A`
-such that `A * V = V * D`.
-
-$(docs_eigh_note)
-
-See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref).
-"""
-@functiondef eigh_full
-
-"""
-    eigh_trunc(A; kwargs...) -> D, V
-    eigh_trunc(A, alg::AbstractAlgorithm) -> D, V
-    eigh_trunc!(A, [DV]; kwargs...) -> D, V
-    eigh_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
-
-
-Compute the symmetric or hermitian truncated eigenvalue decomposition of `A`
-such that `A * V ≈ V * D`.
-
-$(docs_eigh_note)
-
-See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_vals(!)`](@ref eigh_vals).
-"""
-@functiondef eigh_trunc
-
-"""
-    eigh_vals(A; kwargs...) -> D
-    eigh_vals(A, alg::AbstractAlgorithm) -> D
-    eigh_vals!(A, [D]; kwargs...) -> D
-    eigh_vals!(A, [D], alg::AbstractAlgorithm) -> D
-
-Compute the vector of (real) eigenvalues of symmetric or hermitian `A`.
-
-$(docs_eigh_note)
-
-See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_trunc(!)`](@ref eigh_trunc).
-"""
-@functiondef eigh_vals
-# copy input
+# Inputs
+# ------
 function copy_input(::typeof(eigh_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
 function copy_input(::typeof(eigh_vals), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
+copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
 
-# initialize output
-function initialize_output(::typeof(eigh_full!), A::AbstractMatrix, ::LAPACK_EighAlgorithm)
-    n = size(A, 1) # square check will happen later
-    D = Diagonal(similar(A, real(eltype(A)), n))
-    V = similar(A, (n, n))
-    return (D, V)
-end
-function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::LAPACK_EighAlgorithm)
-    n = size(A, 1) # square check will happen later
-    D = similar(A, real(eltype(A)), n)
-    return D
-end
-
-# select default algorithm
-function select_algorithm(::typeof(eigh_full!), A::AbstractMatrix; kwargs...)
-    return default_eigh_algorithm(A; kwargs...)
-end
-function select_algorithm(::typeof(eigh_vals!), A::AbstractMatrix; kwargs...)
-    return default_eigh_algorithm(A; kwargs...)
-end
-
-function default_eigh_algorithm(A::StridedMatrix{T}; kwargs...) where {T<:BlasFloat}
-    return LAPACK_MultipleRelativelyRobustRepresentations(; kwargs...)
-end
-
-# check input
 function check_input(::typeof(eigh_full!), A::AbstractMatrix, DV)
     m, n = size(A)
     m == n || throw(ArgumentError("Eigenvalue decompsition requires square input matrix"))
@@ -108,7 +33,26 @@ function check_input(::typeof(eigh_vals!), A::AbstractMatrix, D)
     return nothing
 end
 
-# actual implementation
+# Outputs
+# -------
+function initialize_output(::typeof(eigh_full!), A::AbstractMatrix, ::LAPACK_EighAlgorithm)
+    n = size(A, 1) # square check will happen later
+    D = Diagonal(similar(A, real(eltype(A)), n))
+    V = similar(A, (n, n))
+    return (D, V)
+end
+function initialize_output(::typeof(eigh_vals!), A::AbstractMatrix, ::LAPACK_EighAlgorithm)
+    n = size(A, 1) # square check will happen later
+    D = similar(A, real(eltype(A)), n)
+    return D
+end
+function initialize_output(::typeof(eigh_trunc!), A::AbstractMatrix,
+                           alg::TruncatedAlgorithm)
+    return initialize_output(eigh_full!, A, alg.alg)
+end
+
+# Implementation
+# --------------
 function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
     check_input(eigh_full!, A, DV)
     D, V = DV
@@ -144,14 +88,4 @@ function eigh_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
     D, V = eigh_full!(A, DV, alg.alg)
     ind = findtruncated(diagview(D), alg.trunc)
     return truncate!((D, V), ind)
-end
-
-copy_input(::typeof(eigh_trunc), A) = copy_input(eigh_full, A)
-
-function select_algorithm(::typeof(eigh_trunc!), A::AbstractMatrix; kwargs...)
-    return TruncatedAlgorithm(default_eigh_algorithm(A; kwargs...), NoTruncation())
-end
-function initialize_output(::typeof(eigh_trunc!), A::AbstractMatrix,
-                           alg::TruncatedAlgorithm)
-    return initialize_output(eigh_full!, A, alg.alg)
 end

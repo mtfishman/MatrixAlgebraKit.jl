@@ -7,23 +7,19 @@
                 LAPACK_Bisection())
         A = randn(rng, T, m, m)
         A = (A + A') / 2
-        Ac = similar(A)
-        V = similar(A)
-        D = Diagonal(similar(A, real(T), m))
-        Dc = similar(A, real(T), m)
 
-        @constinferred eigh_full!(copy!(Ac, A), (D, V), alg)
+        D, V = @constinferred eigh_full(A, alg)
         @test A * V ≈ V * D
         @test V' * V ≈ I
         @test V * V' ≈ I
         @test all(isreal, D)
 
-        D2, V2 = eigh_full!(copy!(Ac, A), (D, V), alg)
+        D2, V2 = eigh_full!(copy(A), (D, V), alg)
         @test D2 == D
         @test V2 == V
 
-        @constinferred eigh_vals!(copy!(Ac, A), Dc, alg)
-        @test D ≈ Diagonal(Dc)
+        D3 = @constinferred eigh_vals(A, alg)
+        @test D ≈ Diagonal(D3)
     end
 end
 
@@ -38,17 +34,16 @@ end
         A = A * A'
         A = (A + A') / 2
         Ac = similar(A)
-        D₀ = reverse(eigh_vals!(copy!(Ac, A)))
+        D₀ = reverse(eigh_vals(A))
         r = m - 2
         s = 1 + sqrt(eps(real(T)))
 
-        alg1 = TruncatedAlgorithm(alg, truncrank(r))
-        D, V = @constinferred eigh_trunc(A, alg1)
+        D, V = @constinferred eigh_trunc(A; alg, trunc=truncrank(r))
         @test length(diagview(D)) == r
         @test LinearAlgebra.opnorm(A - V * D * V') ≈ D₀[r + 1]
 
         alg2 = TruncatedAlgorithm(alg, trunctol(s * D₀[r + 1]))
-        D, V = @constinferred eigh_trunc(A, alg2)
+        D, V = @constinferred eigh_trunc(A; alg, trunc=trunctol(s * D₀[r + 1]))
         @test length(diagview(D)) == r
 
         # TODO: truncation with "global" knowledge (rtol)
