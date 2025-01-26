@@ -5,7 +5,7 @@ using Aqua
 using JET
 using LinearAlgebra: LinearAlgebra, diag, Diagonal, I, isposdef, diagind
 
-diagview(A) = view(A, diagind(A))
+using MatrixAlgebraKit: diagview
 
 @testset "QR Decomposition" verbose = true begin
     include("qr.jl")
