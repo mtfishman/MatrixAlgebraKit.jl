@@ -1,7 +1,6 @@
 # TODO: module Decompositions?
 
 const _DECOMPOSITION_LIST = (:qr_full, :qr_compact,
-                             :eigh_full, :eigh_vals,
                              :schur_full, :schur_vals)
 
 function copy_input end

@@ -36,7 +36,7 @@ function truncate!((U, S, Vᴴ)::Tuple{Vararg{AbstractMatrix,3}}, ind)
     return U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]
 end
 function truncate!((D, V)::Tuple{Vararg{AbstractMatrix,2}}, ind)
-    return Diagonal(diagview(D)[ind]), V[ind, :]
+    return Diagonal(diagview(D)[ind]), V[:, ind]
 end
 
 # TODO: this may also permute the eigenvalues, decide if we want to allow this or not

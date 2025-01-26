@@ -17,8 +17,8 @@ include("decompositions/decompositions.jl")
 include("decompositions/truncation.jl")
 include("decompositions/qr.jl")
 include("decompositions/svd.jl")
-include("decompositions/eigh.jl")
 include("decompositions/eig.jl")
+include("decompositions/eigh.jl")
 include("decompositions/schur.jl")
 
 end
