@@ -3,17 +3,15 @@
     m = 54
     for alg in (LAPACK_Simple(), LAPACK_Expert())
         A = randn(rng, T, m, m)
-        Ac = similar(A)
         Tc = complex(T)
-        V = similar(A, Tc)
-        D = Diagonal(similar(A, Tc, m))
-        Dc = similar(A, Tc, m)
 
-        @constinferred eig_full!(copy!(Ac, A), (D, V), alg)
+        D, V = @constinferred eig_full(A, alg)
+        @test eltype(D) == eltype(V) == Tc
         @test A * V ≈ V * D
 
-        @constinferred eig_vals!(copy!(Ac, A), Dc, alg)
-        @test D ≈ Diagonal(Dc)
+        D2 = @constinferred eig_vals(A, alg)
+        @test eltype(D2) == Tc
+        @test D ≈ Diagonal(D2)
     end
 end
 
