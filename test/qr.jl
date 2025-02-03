@@ -2,17 +2,23 @@
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
+        minmn = min(m, n)
         A = randn(rng, T, m, n)
-        Ac = similar(A)
-        Q = similar(A, m, min(m, n))
-        R = similar(A, min(m, n), n)
-        Q2 = similar(Q)
-        noR = similar(A, min(m, n), 0)
-        qr_compact!(copy!(Ac, A), (Q, R))
+        Q, R = qr_compact(A)
+        @test Q isa Matrix{T} && size(Q) == (m, minmn)
+        @test R isa Matrix{T} && size(R) == (minmn, n)
         @test Q * R ≈ A
         @test Q' * Q ≈ I
+
+        Ac = similar(A)
+        Q2 = similar(Q)
+        noR = similar(A, min(m, n), 0)
+        Q2, R2 = @constinferred qr_compact!(copy!(Ac, A), (Q, R))
+        @test Q2 === Q
+        @test R2 === R
         qr_compact!(copy!(Ac, A), (Q2, noR))
         @test Q == Q2
+
         # unblocked algorithm
         qr_compact!(copy!(Ac, A), (Q, R); blocksize=1)
         @test Q * R ≈ A
@@ -71,17 +77,25 @@ end
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
+        minmn = min(m, n)
         A = randn(rng, T, m, n)
+        Q, R = qr_full(A)
+        @test Q isa Matrix{T} && size(Q) == (m, m)
+        @test R isa Matrix{T} && size(R) == (m, n)
+        @test Q * R ≈ A
+        @test Q' * Q ≈ I
+
         Ac = similar(A)
-        Q = similar(A, m, m)
-        R = similar(A)
         Q2 = similar(Q)
-        noR = similar(A, min(m, n), 0)
-        qr_full!(copy!(Ac, A), (Q, R))
+        noR = similar(A, m, 0)
+        Q2, R2 = @constinferred qr_full!(copy!(Ac, A), (Q, R))
+        @test Q2 === Q
+        @test R2 === R
         @test Q * R ≈ A
         @test Q' * Q ≈ I
         qr_full!(copy!(Ac, A), (Q2, noR))
         @test Q == Q2
+
         # unblocked algorithm
         qr_full!(copy!(Ac, A), (Q, R); blocksize=1)
         @test Q * R ≈ A

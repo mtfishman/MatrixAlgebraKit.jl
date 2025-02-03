@@ -151,10 +151,10 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     end
     return S
 end
-
-function svd_null!(A::AbstractMatrix, alg::LAPACK_SVDAlgorithm; atol)
+function svd_null!(A::AbstractMatrix, alg::LAPACK_SVDAlgorithm)
     m, n = size(A)
     _, _, Vᴴ = svd_full!(A, alg)
+    atol = alg.atol
     i = findfirst(<=(atol), diag(S))
     if isnothing(i)
         i = min(m, n) + 1

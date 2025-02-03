@@ -1,38 +1,8 @@
 # TODO: module Decompositions?
 
-const _DECOMPOSITION_LIST = (:qr_full, :qr_compact,
-                             :schur_full, :schur_vals)
-
 function copy_input end
 function initialize_output end
 function check_input end
-
-for f in _DECOMPOSITION_LIST
-    @eval @functiondef $f
-    # f! = Symbol(f, :!)
-    # @eval begin
-    #     function $f(A; kwargs...)
-    #         Ac = copy_input($f, A)
-    #         return $f!(Ac; kwargs...)
-    #     end
-    #     function $f(A, alg::Algorithm)
-    #         Ac = copy_input($f, A)
-    #         return $f!(Ac, alg)
-    #     end
-    #     function $f!(A; kwargs...)
-    #         out = initialize_output($f!, A)
-    #         return $f!(A, out; kwargs...)
-    #     end
-    #     function $f!(A, out; kwargs...)
-    #         alg = select_algorithm($f!, A; kwargs...)
-    #         return $f!(A, out, alg)
-    #     end
-    #     function $f!(A, alg::Algorithm)
-    #         out = initialize_output($f!, A)
-    #         return $f!(A, out, alg)
-    #     end
-    # end
-end
 
 # ==========
 # ALGORITHMS

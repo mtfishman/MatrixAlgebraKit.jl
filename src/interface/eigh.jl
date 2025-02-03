@@ -16,10 +16,17 @@ For generic eigenvalue decompositions, see [`eig`](@ref).
     eigh_full!(A, [DV]; kwargs...) -> D, V
     eigh_full!(A, [DV], alg::AbstractAlgorithm) -> D, V
 
-Compute the symmetric or hermitian eigenvalue decomposition of `A`
-such that `A * V = V * D`.
+Compute the full eigenvalue decomposition of the symmetric or hermitian matrix `A`,
+such that `A * V = V * D`, where the unitary matrix `V` contains the orthogonal eigenvectors
+and the real diagonal matrix `D` contains the associated eigenvalues.
 
-$(docs_eigh_note)
+!!! note
+    The bang method `eigh_full!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `DV` as output.
+
+!!! note
+    $(docs_eigh_note)
 
 See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref).
 """
@@ -31,11 +38,18 @@ See also [`eigh_vals(!)`](@ref eigh_vals) and [`eigh_trunc(!)`](@ref).
     eigh_trunc!(A, [DV]; kwargs...) -> D, V
     eigh_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
 
+Compute a partial or truncated eigenvalue decomposition of the symmetric or hermitian matrix
+`A`, such that `A * V ≈ V * D`, where the isometric matrix `V` contains a subset of the
+orthogonal eigenvectors and the real diagonal matrix `D` contains the associated eigenvalues,
+selected according to a truncation strategy. 
 
-Compute the symmetric or hermitian truncated eigenvalue decomposition of `A`
-such that `A * V ≈ V * D`.
+!!! note
+    The bang method `eigh_trunc!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `DV` as output.
 
-$(docs_eigh_note)
+!!! note
+    $(docs_eigh_note)
 
 See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_vals(!)`](@ref eigh_vals).
 """
@@ -47,9 +61,15 @@ See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_vals(!)`](@ref eigh_vals).
     eigh_vals!(A, [D]; kwargs...) -> D
     eigh_vals!(A, [D], alg::AbstractAlgorithm) -> D
 
-Compute the vector of (real) eigenvalues of symmetric or hermitian `A`.
+Compute the list of (real) eigenvalues of the symmetric or hermitian matrix `A`.
 
-$(docs_eigh_note)
+!!! note
+    The bang method `eigh_vals!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `DV` as output.
+
+!!! note
+    $(docs_eigh_note)
 
 See also [`eigh_full(!)`](@ref eigh_full) and [`eigh_trunc(!)`](@ref eigh_trunc).
 """

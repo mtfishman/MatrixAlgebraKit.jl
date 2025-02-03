@@ -7,21 +7,28 @@
                                       (LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
                                        LAPACK_Bisection(), LAPACK_Jacobi())
             n > m && alg isa LAPACK_Jacobi && continue # not supported
+            minmn = min(m, n)
             A = randn(rng, T, m, n)
 
             U, S, Vᴴ = svd_compact(A, alg)
-            @test size(U) == (m, k)
-            @test size(S) == (k, k)
-            @test size(Vᴴ) == (k, n)
+            @test U isa Matrix{T} && size(U) == (m, minmn)
+            @test S isa Diagonal{real(T)} && size(S) == (minmn, minmn)
+            @test Vᴴ isa Matrix{T} && size(Vᴴ) == (minmn, n)
             @test U * S * Vᴴ ≈ A
             @test U' * U ≈ I
             @test Vᴴ * Vᴴ' ≈ I
             @test isposdef(S)
 
-            U2, S2, V2ᴴ = @constinferred svd_compact!(copy(A), (U, S, Vᴴ), alg)
-            @test U2 == U
-            @test S2 == S
-            @test V2ᴴ == Vᴴ
+            Ac = similar(A)
+            Sc = similar(A, real(T), min(m, n))
+            U2, S2, V2ᴴ = @constinferred svd_compact!(copy!(Ac, A), (U, S, Vᴴ), alg)
+            @test U2 === U
+            @test S2 === S
+            @test V2ᴴ === Vᴴ
+            @test U * S * Vᴴ ≈ A
+            @test U' * U ≈ I
+            @test Vᴴ * Vᴴ' ≈ I
+            @test isposdef(S)
 
             Sd = svd_vals(A, alg)
             @test S ≈ Diagonal(Sd)
@@ -36,19 +43,30 @@ end
         @testset "algorithm $alg" for alg in
                                       (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
             A = randn(rng, T, m, n)
-
             U, S, Vᴴ = svd_full(A, alg)
+            @test U isa Matrix{T} && size(U) == (m, m)
+            @test S isa Matrix{real(T)} && size(S) == (m, n)
+            @test Vᴴ isa Matrix{T} && size(Vᴴ) == (n, n)
             @test U * S * Vᴴ ≈ A
             @test U' * U ≈ I
-            @test U * U' ≈ I
+            @test Vᴴ * Vᴴ' ≈ I
+            @test all(isposdef, diagview(S))
+
+            Ac = similar(A)
+            U2, S2, V2ᴴ = @constinferred svd_full!(copy!(Ac, A), (U, S, Vᴴ), alg)
+            @test U2 === U
+            @test S2 === S
+            @test V2ᴴ === Vᴴ
+            @test U * S * Vᴴ ≈ A
+            @test U' * U ≈ I
             @test Vᴴ * Vᴴ' ≈ I
             @test Vᴴ' * Vᴴ ≈ I
             @test all(isposdef, diagview(S))
 
-            U2, S2, V2ᴴ = @constinferred svd_full!(copy(A), (U, S, Vᴴ), alg)
-            @test U2 == U
-            @test S2 == S
-            @test V2ᴴ == Vᴴ
+            Sc = similar(A, real(T), min(m, n))
+            Sc2 = svd_vals!(copy!(Ac, A), Sc, alg)
+            @test Sc === Sc2
+            @test diagview(S) ≈ Sc
         end
     end
 end

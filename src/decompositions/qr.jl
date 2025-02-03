@@ -1,4 +1,5 @@
-# copy input
+# Inputs
+# ------
 function copy_input(::typeof(qr_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
@@ -6,34 +7,6 @@ function copy_input(::typeof(qr_compact), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
 
-# initialize output
-function initialize_output(::typeof(qr_full!), A::AbstractMatrix)
-    m, n = size(A)
-    Q = similar(A, (m, m))
-    R = similar(A, (m, n))
-    return (Q, R)
-end
-function initialize_output(::typeof(qr_compact!), A::AbstractMatrix)
-    m, n = size(A)
-    minmn = min(m, n)
-    Q = similar(A, (m, minmn))
-    R = similar(A, (minmn, n))
-    return (Q, R)
-end
-
-# select default algorithm
-function select_algorithm(::typeof(qr_full!), A::AbstractMatrix; kwargs...)
-    return default_qr_algorithm(A; kwargs...)
-end
-function select_algorithm(::typeof(qr_compact!), A::AbstractMatrix; kwargs...)
-    return default_qr_algorithm(A; kwargs...)
-end
-
-function default_qr_algorithm(A::StridedMatrix{T}; kwargs...) where {T<:BlasFloat}
-    return LAPACK_HouseholderQR(; kwargs...)
-end
-
-# check input
 function check_input(::typeof(qr_full!), A::AbstractMatrix, QR)
     m, n = size(A)
     Q, R = QR
@@ -57,6 +30,24 @@ function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR)
     end
 end
 
+# Outputs
+# -------
+function initialize_output(::typeof(qr_full!), A::AbstractMatrix, ::LAPACK_HouseholderQR)
+    m, n = size(A)
+    Q = similar(A, (m, m))
+    R = similar(A, (m, n))
+    return (Q, R)
+end
+function initialize_output(::typeof(qr_compact!), A::AbstractMatrix, ::LAPACK_HouseholderQR)
+    m, n = size(A)
+    minmn = min(m, n)
+    Q = similar(A, (m, minmn))
+    R = similar(A, (minmn, n))
+    return (Q, R)
+end
+
+# Implementation
+# --------------
 # actual implementation
 function qr_full!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
     check_input(qr_full!, A, QR)

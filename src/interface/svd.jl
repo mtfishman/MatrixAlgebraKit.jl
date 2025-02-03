@@ -6,9 +6,14 @@
     svd_full!(A, [USVᴴ]; kwargs...) -> U, S, Vᴴ
     svd_full!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ
 
-Compute the singular value decomposition (SVD) of `A`, such that `A = U * S * Vᴴ`.
-The full version produces components such that for an M×N matrix `A`,
-both `U` and `Vᴴ` are square and unitary, of size M×M and N×N respectively.
+Compute the full singular value decomposition (SVD) of the rectangular matrix `A` of size
+`(m, n)`, such that `A = U * S * Vᴴ`. Here, `U` and `Vᴴ` are unitary matrices of size
+`(m, m)` and `(n, n)` respectively, and `S` is a diagonal matrix of size `(m, n)`.
+
+!!! note
+    The bang method `svd_full!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `USVᴴ` as output.
 
 See also [`svd_compact(!)`](@ref svd_compact), [`svd_vals(!)`](@ref svd_vals),
 [`svd_trunc(!)`](@ref svd_trunc) and [`svd_null(!)`](@ref svd_null).
@@ -21,10 +26,15 @@ See also [`svd_compact(!)`](@ref svd_compact), [`svd_vals(!)`](@ref svd_vals),
     svd_compact!(A, [USVᴴ]; kwargs...) -> U, S, Vᴴ
     svd_compact!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ
 
-Compute the singular value decomposition (SVD) of `A`, such that `A = U * S * Vᴴ`.
-The compact version produces components such that for an M×N matrix `A`,
-`S` is square of size K×K with `K = min(M, N)`, and `U` and `Vᴴ` are isometries
-of size M×K and K×N respectively.
+Compute the compact singular value decomposition (SVD) of the rectangular matrix `A` of size
+`(m, n)`, such that `A = U * S * Vᴴ`. Here, `U` is an isometric matrix (orthonormal columns)
+of size `(m, k)`, whereas  `Vᴴ` is a matrix of size `(k, n)` with orthonormal rows and `S`
+is a square diagonal matrix of size `(k, k)`, with `k = min(m, n)`.
+
+!!! note
+    The bang method `svd_compact!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `USVᴴ` as output.
 
 See also [`svd_full(!)`](@ref svd_full), [`svd_vals(!)`](@ref svd_vals),
 [`svd_trunc(!)`](@ref svd_trunc) and [`svd_null(!)`](@ref svd_null).
@@ -38,14 +48,16 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_vals(!)`](@ref svd_vals),
     svd_trunc!(A, [USVᴴ]; kwargs...) -> U, S, Vᴴ
     svd_trunc!(A, [USVᴴ], alg::AbstractAlgorithm) -> U, S, Vᴴ
 
-Compute the truncated singular value decomposition (SVD) of `A`, such that `A ≈ U * S * Vᴴ`.
-The truncated version produces components such that for an M×N matrix `A`,
-`S` is square of size K×K with K the number of kept singular values,
-and `U` and `Vᴴ` are isometries of size M×K and K×N respectively.
+Compute a partial or truncated singular value decomposition (SVD) of `A`, such that
+`A * (Vᴴ)' =  U * S`. Here, `U` is an isometric matrix (orthonormal columns) of size
+`(m, k)`, whereas  `Vᴴ` is a matrix of size `(k, n)` with orthonormal rows and `S` is a
+square diagonal matrix of size `(k, k)`, with `k` is set by the truncation strategy.
 
-Depending on the `alg`, the input `USVᴴ` can sometimes be either ignored or its
-memory recycled, such that the actual output does not need to, but can coincide
-with the provided `USVᴴ`.
+!!! note
+    The bang method `svd_trunc!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `USVᴴ` as output.
+
 
 See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact),
 [`svd_vals(!)`](@ref svd_vals) and [`svd_null(!)`](@ref svd_null).

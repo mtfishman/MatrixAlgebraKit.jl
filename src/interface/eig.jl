@@ -5,8 +5,8 @@
 
 docs_eig_note = """
 Note that `eig` and its variants do not assume additional structure on the input,
-and therefore will always return complex eigenvalues and eigenvectors. For real
-eigenvalue decompositions of symmetric or hermitian matrices, see [`eigh`](@ref).
+and therefore will always return complex eigenvalues and eigenvectors. For the real
+eigenvalue decomposition of symmetric or hermitian operators, see [`eigh`](@ref).
 """
 
 # TODO: do we need "full"?
@@ -16,9 +16,17 @@ eigenvalue decompositions of symmetric or hermitian matrices, see [`eigh`](@ref)
     eig_full!(A, [DV]; kwargs...) -> D, V
     eig_full!(A, [DV], alg::AbstractAlgorithm) -> D, V
 
-Compute the eigenvalue decomposition of `A` such that `A * V = V * D`.
+Compute the full eigenvalue decomposition of the square matrix `A`,
+such that `A * V = V * D`, where the invertible matrix `V` contains the eigenvectors
+and the diagonal matrix `D` contains the associated eigenvalues.
 
-$(docs_eig_note)
+!!! note
+    The bang method `eig_full!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `DV` as output.
+
+!!! note
+    $(docs_eig_note)
 
 See also [`eig_vals(!)`](@ref eig_vals) and [`eig_trunc(!)`](@ref).
 """
@@ -30,10 +38,18 @@ See also [`eig_vals(!)`](@ref eig_vals) and [`eig_trunc(!)`](@ref).
     eig_trunc!(A, [DV]; kwargs...) -> D, V
     eig_trunc!(A, [DV], alg::AbstractAlgorithm) -> D, V
 
+Compute a partial or truncated eigenvalue decomposition of the matrix `A`,
+such that `A * V ≈ V * D`, where the (possibly rectangular) matrix `V` contains 
+a subset of eigenvectors and the diagonal matrix `D` contains the associated eigenvalues,
+selected according to a truncation strategy.
 
-Compute the truncated eigenvalue decomposition of `A` such that `A * V ≈ V * D`.
+!!! note
+    The bang method `eig_trunc!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `DV` as output.
 
-$(docs_eig_note)
+!!! note
+    $(docs_eig_note)
 
 See also [`eig_full(!)`](@ref eig_full) and [`eig_vals(!)`](@ref eig_vals).
 """
@@ -45,9 +61,15 @@ See also [`eig_full(!)`](@ref eig_full) and [`eig_vals(!)`](@ref eig_vals).
     eig_vals!(A, [D]; kwargs...) -> D
     eig_vals!(A, [D], alg::AbstractAlgorithm) -> D
 
-Compute the vector of eigenvalues of `A`.
+Compute the list of eigenvalues of `A`.
 
-$(docs_eig_note)
+!!! note
+    The bang method `eig_vals!` optionally accepts the output structure and
+    possibly destroys the input matrix `A`. Always use the return value of the function
+    as it may not always be possible to use the provided `DV` as output.
+
+!!! note
+    $(docs_eig_note)
 
 See also [`eig_full(!)`](@ref eig_full) and [`eig_trunc(!)`](@ref eig_trunc).
 """
