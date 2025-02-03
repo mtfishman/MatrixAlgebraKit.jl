@@ -14,12 +14,12 @@ end
 @testset "Singular Value Decomposition" verbose = true begin
     include("svd.jl")
 end
-# @testset "Hermitian Eigenvalue Decomposition" verbose = true begin
-#     include("eigh.jl")
-# end
-# @testset "General Eigenvalue Decomposition" verbose = true begin
-#     include("eig.jl")
-# end
+@testset "Hermitian Eigenvalue Decomposition" verbose = true begin
+    include("eigh.jl")
+end
+@testset "General Eigenvalue Decomposition" verbose = true begin
+    include("eig.jl")
+end
 
 @testset "MatrixAlgebraKit.jl" begin
     @testset "Code quality (Aqua.jl)" begin

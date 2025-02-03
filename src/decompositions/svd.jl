@@ -10,15 +10,9 @@ end
 function copy_input(::typeof(svd_full), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
-function copy_input(::typeof(svd_compact), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
-function copy_input(::typeof(svd_null), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
-function copy_input(::typeof(svd_vals), A::AbstractMatrix)
-    return copy!(similar(A, float(eltype(A))), A)
-end
+copy_input(::typeof(svd_compact), A::AbstractMatrix) = copy_input(svd_full, A)
+copy_input(::typeof(svd_vals), A::AbstractMatrix) = copy_input(svd_full, A)
+# copy_input(::typeof(svd_null), A::AbstractMatrix) = copy_input(svd_full, A)
 copy_input(::typeof(svd_trunc), A) = copy_input(svd_compact, A)
 
 # TODO: many of these checks are happening again in the LAPACK routines
@@ -151,16 +145,16 @@ function svd_vals!(A::AbstractMatrix, S, alg::LAPACK_SVDAlgorithm)
     end
     return S
 end
-function svd_null!(A::AbstractMatrix, alg::LAPACK_SVDAlgorithm)
-    m, n = size(A)
-    _, _, Vᴴ = svd_full!(A, alg)
-    atol = alg.atol
-    i = findfirst(<=(atol), diag(S))
-    if isnothing(i)
-        i = min(m, n) + 1
-    end
-    return Vᴴ[i:end, :]'
-end
+# function svd_null!(A::AbstractMatrix, alg::LAPACK_SVDAlgorithm)
+#     m, n = size(A)
+#     _, _, Vᴴ = svd_full!(A, alg)
+#     atol = alg.atol
+#     i = findfirst(<=(atol), diag(S))
+#     if isnothing(i)
+#         i = min(m, n) + 1
+#     end
+#     return Vᴴ[i:end, :]'
+# end
 
 function svd_trunc!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
     U, S, Vᴴ = svd_compact!(A, USVᴴ, alg.alg)

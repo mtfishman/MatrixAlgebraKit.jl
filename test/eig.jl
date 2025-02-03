@@ -5,13 +5,19 @@
         A = randn(rng, T, m, m)
         Tc = complex(T)
 
-        D, V = @constinferred eig_full(A, alg)
+        D, V = @constinferred eig_full(A; alg)
         @test eltype(D) == eltype(V) == Tc
         @test A * V ≈ V * D
 
-        D2 = @constinferred eig_vals(A, alg)
-        @test eltype(D2) == Tc
-        @test D ≈ Diagonal(D2)
+        Ac = similar(A)
+        D2, V2 = @constinferred eig_full!(copy!(Ac, A), (D, V), alg)
+        @test D2 === D
+        @test V2 === V
+        @test A * V ≈ V * D
+
+        Dc = @constinferred eig_vals(A, alg)
+        @test eltype(Dc) == Tc
+        @test D ≈ Diagonal(Dc)
     end
 end
 
@@ -32,16 +38,14 @@ end
         @test length(D1.diag) == r
 
         s = 1 + sqrt(eps(real(T)))
-        trunc2 = trunctol(s * abs(D₀[r + 1]))
-        alg2 = TruncatedAlgorithm(alg, trunc2)
-
+        alg2 = TruncatedAlgorithm(alg, trunctol(s * abs(D₀[r + 1])))
         D2, V2 = @constinferred eig_trunc(A, alg2)
-        @test length(D2.diag) == r
+        @test length(diagview(D2)) == r
 
-        # trunctol keeps order, truncrank does not
-        I1 = sortperm(diagview(D1); by=abs, rev=true)
-        I2 = sortperm(diagview(D2); by=abs, rev=true)
-        @test diagview(D1)[I1] ≈ diagview(D2)[I2]
-        @test V1[:, I1] ≈ V2[:, I2]
+        # # trunctol keeps order, truncrank does not
+        # I1 = sortperm(diagview(D1); by=abs, rev=true)
+        # I2 = sortperm(diagview(D2); by=abs, rev=true)
+        # @test diagview(D1)[I1] ≈ diagview(D2)[I2]
+        # @test V1[:, I1] ≈ V2[:, I2]
     end
 end

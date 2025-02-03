@@ -10,7 +10,7 @@
             minmn = min(m, n)
             A = randn(rng, T, m, n)
 
-            U, S, Vᴴ = svd_compact(A, alg)
+            U, S, Vᴴ = svd_compact(A; alg)
             @test U isa Matrix{T} && size(U) == (m, minmn)
             @test S isa Diagonal{real(T)} && size(S) == (minmn, minmn)
             @test Vᴴ isa Matrix{T} && size(Vᴴ) == (minmn, n)
@@ -43,7 +43,7 @@ end
         @testset "algorithm $alg" for alg in
                                       (LAPACK_DivideAndConquer(), LAPACK_QRIteration())
             A = randn(rng, T, m, n)
-            U, S, Vᴴ = svd_full(A, alg)
+            U, S, Vᴴ = svd_full(A; alg)
             @test U isa Matrix{T} && size(U) == (m, m)
             @test S isa Matrix{real(T)} && size(S) == (m, n)
             @test Vᴴ isa Matrix{T} && size(Vᴴ) == (n, n)
