@@ -66,7 +66,7 @@ Compute the list of eigenvalues of `A`.
 !!! note
     The bang method `eig_vals!` optionally accepts the output structure and
     possibly destroys the input matrix `A`. Always use the return value of the function
-    as it may not always be possible to use the provided `DV` as output.
+    as it may not always be possible to use the provided `D` as output.
 
 !!! note
     $(docs_eig_note)

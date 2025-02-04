@@ -12,6 +12,8 @@ export eigh_full, eigh_vals, eigh_trunc
 export eigh_full!, eigh_vals!, eigh_trunc!
 export eig_full, eig_vals, eig_trunc
 export eig_full!, eig_vals!, eig_trunc!
+export schur_full, schur_vals
+export schur_full!, schur_vals!
 
 export truncrank, trunctol, TruncationKeepSorted, TruncationKeepFiltered
 
@@ -22,12 +24,14 @@ include("interface/qr.jl")
 include("interface/svd.jl")
 include("interface/eig.jl")
 include("interface/eigh.jl")
+include("interface/schur.jl")
+
 include("decompositions/decompositions.jl")
 include("decompositions/truncation.jl")
 include("decompositions/qr.jl")
 include("decompositions/svd.jl")
 include("decompositions/eig.jl")
 include("decompositions/eigh.jl")
-# include("decompositions/schur.jl")
+include("decompositions/schur.jl")
 
 end

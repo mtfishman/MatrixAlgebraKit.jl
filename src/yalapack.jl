@@ -876,7 +876,7 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
             end
             lda = max(1, stride(A, 2))
             ldv = max(1, stride(V, 2))
-            sdim = Ref{BlasInt}()
+            sdim = Vector{BlasInt}(undef, 1)
             work = Vector{$elty}(undef, 1)
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
@@ -891,14 +891,14 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
                     #! format: off
                     ccall((@blasfunc($gees), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8}, Ptr{Cvoid},
-                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ref{BlasInt},
+                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
                            Ptr{$elty}, Ptr{$elty}, Ptr{$elty}, Ref{BlasInt},
-                           Ptr{$elty}, Ref{BlasInt},
-                           Ptr{BlasInt}, Clong, Clong),
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{Cvoid},
+                           Ref{BlasInt}, Clong, Clong),
                           jobvs, 'N', C_NULL,
                           n, A, lda, sdim,
                           valsR, valsI, V, ldv,
-                          work, lwork,
+                          work, lwork, C_NULL,
                           info, 1, 1)
                     #! format: on
                     chklapackerror(info[])
@@ -913,14 +913,14 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
                     #! format: off
                     ccall((@blasfunc($gees), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8}, Ptr{Cvoid},
-                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ref{BlasInt},
-                           Ptr{$elty}, Ptr{$elty}, Ptr{$elty},
-                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty},
-                           Ptr{BlasInt}, Clong, Clong),
+                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                           Ptr{$elty}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ptr{Cvoid},
+                           Ref{BlasInt}, Clong, Clong),
                           jobvs, 'N', C_NULL,
                           n, A, lda, sdim,
                           vals, V, ldv,
-                          work, lwork, rwork,
+                          work, lwork, rwork, C_NULL,
                           info, 1, 1)
                     #! format: on
                     chklapackerror(info[])
@@ -933,6 +933,91 @@ for (gees, geesx, geev, geevx, ggev, elty, celty, relty) in
 
             # Cleanup the output in the real case
             if eltype(A) <: Real
+                _reorder_realeigendecomposition!(vals, valsR, valsI, work, V, 'N')
+            end
+            return A, V, vals
+        end
+        function geesx!(A::AbstractMatrix{$elty},
+                        V::AbstractMatrix{$elty}=similar(A),
+                        vals::AbstractVector{$celty}=similar(A, $celty, size(A, 1)))
+            require_one_based_indexing(A, V)
+            chkstride1(A, V)
+            n = checksquare(A)
+            chkfinite(A) # balancing routines don't support NaNs and Infs
+            if length(V) == 0
+                jobvs = 'N'
+            else
+                n == checksquare(V) ||
+                    throw(DimensionMismatch("square size mismatch between A and VR"))
+                jobvs = 'V'
+            end
+            lda = max(1, stride(A, 2))
+            ldv = max(1, stride(V, 2))
+            sdim = Vector{BlasInt}(undef, 1)
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+
+            if $elty <: Real
+                iwork = Vector{BlasInt}(undef, 1)
+                liwork = BlasInt(-1)
+                vals2 = reinterpret($elty, vals)
+                # reuse memory, we will have to reorder afterwards to bring real and imaginary
+                # components in the order as required for the Complex type
+                valsR = view(vals2, 1:n)
+                valsI = view(vals2, (n + 1):(2n))
+                for i in 1:2  # first call returns lwork as work[1]
+                    #! format: off
+                    ccall((@blasfunc($geesx), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ptr{Cvoid}, Ref{UInt8},
+                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                           Ptr{$elty}, Ptr{$elty}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{Cvoid}, Ptr{Cvoid},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Ref{BlasInt}, Ptr{Cvoid},
+                           Ref{BlasInt}, Clong, Clong, Clong),
+                          jobvs, 'N', C_NULL, 'N',
+                          n, A, lda, sdim,
+                          valsR, valsI, V, ldv,
+                          C_NULL, C_NULL,
+                          work, lwork, iwork, liwork, C_NULL,
+                          info, 1, 1, 1)
+                    #! format: on
+                    chklapackerror(info[])
+                    if i == 1
+                        lwork = BlasInt(real(work[1]))
+                        liwork = iwork[1]
+                        resize!(work, lwork)
+                        resize!(iwork, liwork)
+                    end
+                end
+            else
+                rwork = Vector{$relty}(undef, n)
+                for i in 1:2
+                    #! format: off
+                    ccall((@blasfunc($geesx), libblastrampoline), Cvoid,
+                          (Ref{UInt8}, Ref{UInt8}, Ptr{Cvoid}, Ref{UInt8},
+                           Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
+                           Ptr{$elty}, Ptr{$elty}, Ref{BlasInt},
+                           Ptr{Cvoid}, Ptr{Cvoid},
+                           Ptr{$elty}, Ref{BlasInt}, Ptr{$relty}, Ptr{Cvoid},
+                           Ref{BlasInt}, Clong, Clong, Clong),
+                          jobvs, 'N', C_NULL, 'N',
+                          n, A, lda, sdim,
+                          vals, V, ldv,
+                          C_NULL, C_NULL,
+                          work, lwork, rwork, C_NULL,
+                          info, 1, 1, 1)
+                    #! format: on
+                    chklapackerror(info[])
+                    if i == 1
+                        lwork = BlasInt(real(work[1]))
+                        resize!(work, lwork)
+                    end
+                end
+            end
+
+            # Cleanup the output in the real case
+            if $elty <: Real
                 _reorder_realeigendecomposition!(vals, valsR, valsI, work, V, 'N')
             end
             return A, V, vals
@@ -1609,7 +1694,6 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                           work, lwork, rwork, lrwork,
                           info, 1, 1, 1)
                 else
-                    @show lwork
                     ccall((@blasfunc($gesvj), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
                            Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},

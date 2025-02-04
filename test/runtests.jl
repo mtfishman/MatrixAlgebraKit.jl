@@ -20,6 +20,9 @@ end
 @testset "General Eigenvalue Decomposition" verbose = true begin
     include("eig.jl")
 end
+@testset "Schur Decomposition" verbose = true begin
+    include("schur.jl")
+end
 
 @testset "MatrixAlgebraKit.jl" begin
     @testset "Code quality (Aqua.jl)" begin

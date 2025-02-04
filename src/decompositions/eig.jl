@@ -62,7 +62,7 @@ function eig_full!(A::AbstractMatrix, DV, alg::LAPACK_EigAlgorithm)
     D, V = DV
     if alg isa LAPACK_Simple
         isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple does not accept any keyword arguments"))
+            throw(ArgumentError("LAPACK_Simple (geev) does not accept any keyword arguments"))
         YALAPACK.geev!(A, D.diag, V)
     else # alg isa LAPACK_Expert
         YALAPACK.geevx!(A, D.diag, V; alg.kwargs...)
@@ -75,7 +75,7 @@ function eig_vals!(A::AbstractMatrix, D, alg::LAPACK_EigAlgorithm)
     V = similar(A, complex(eltype(A)), (size(A, 1), 0))
     if alg isa LAPACK_Simple
         isempty(alg.kwargs) ||
-            throw(ArgumentError("LAPACK_Simple does not accept any keyword arguments"))
+            throw(ArgumentError("LAPACK_Simple (geev) does not accept any keyword arguments"))
         YALAPACK.geev!(A, D, V)
     else # alg isa LAPACK_Expert
         YALAPACK.geevx!(A, D, V; alg.kwargs...)
