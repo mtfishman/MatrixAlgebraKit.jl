@@ -50,6 +50,8 @@ function truncate!((D, V)::Tuple{Vararg{AbstractMatrix,2}}, ind)
     return Diagonal(diagview(D)[ind]), V[:, ind]
 end
 
+findtruncated(values::AbstractVector, ::NoTruncation) = trues(size(values))
+
 # TODO: this may also permute the eigenvalues, decide if we want to allow this or not
 # can be solved by going to simply sorting the resulting `ind`
 function findtruncated(values::AbstractVector, strategy::TruncationKeepSorted)
