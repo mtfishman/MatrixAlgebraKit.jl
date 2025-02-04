@@ -31,21 +31,20 @@ end
         D₀ = sort!(eig_vals(A); by=abs, rev=true)
         rmin = findfirst(i -> abs(D₀[end - i]) != abs(D₀[end - i - 1]), 1:(m - 2))
         r = length(D₀) - rmin
-        trunc1 = truncrank(r)
-        alg1 = TruncatedAlgorithm(alg, trunc1)
 
-        D1, V1 = @constinferred eig_trunc(A, alg1)
+        D1, V1 = @constinferred eig_trunc(A; alg, trunc=truncrank(r))
         @test length(D1.diag) == r
+        @test A * V1 ≈ V1 * D1
 
         s = 1 + sqrt(eps(real(T)))
         alg2 = TruncatedAlgorithm(alg, trunctol(s * abs(D₀[r + 1])))
         D2, V2 = @constinferred eig_trunc(A, alg2)
         @test length(diagview(D2)) == r
+        @test A * V2 ≈ V2 * D2
 
-        # # trunctol keeps order, truncrank does not
-        # I1 = sortperm(diagview(D1); by=abs, rev=true)
-        # I2 = sortperm(diagview(D2); by=abs, rev=true)
-        # @test diagview(D1)[I1] ≈ diagview(D2)[I2]
-        # @test V1[:, I1] ≈ V2[:, I2]
+        # trunctol keeps order, truncrank might not
+        # test for same subspace
+        @test V1 * ((V1' * V1) \ (V1' * V2)) ≈ V2
+        @test V2 * ((V2' * V2) \ (V2' * V1)) ≈ V1
     end
 end

@@ -1609,6 +1609,7 @@ for (gesvd, gesdd, gesvdx, gejsv, gesvj, elty, relty) in
                           work, lwork, rwork, lrwork,
                           info, 1, 1, 1)
                 else
+                    @show lwork
                     ccall((@blasfunc($gesvj), libblastrampoline), Cvoid,
                           (Ref{UInt8}, Ref{UInt8}, Ref{UInt8},
                            Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},

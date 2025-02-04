@@ -51,12 +51,12 @@ function truncate!((D, V)::Tuple{Vararg{AbstractMatrix,2}}, ind)
 end
 
 # TODO: this may also permute the eigenvalues, decide if we want to allow this or not
-# can be solved by going to logical indexing instead
+# can be solved by going to simply sorting the resulting `ind`
 function findtruncated(values::AbstractVector, strategy::TruncationKeepSorted)
     sorted = sortperm(values; by=strategy.sortby, rev=strategy.rev)
     howmany = min(strategy.howmany, length(sorted))
     ind = sorted[1:howmany]
-    return ind
+    return ind # TODO: consider sort!(ind)
 end
 
 function findtruncated(values::AbstractVector, strategy::TruncationKeepFiltered)

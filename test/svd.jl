@@ -3,9 +3,13 @@
     m = 54
     @testset "size ($m, $n)" for n in (37, m, 63)
         k = min(m, n)
-        @testset "algorithm $alg" for alg in
-                                      (LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
-                                       LAPACK_Bisection(), LAPACK_Jacobi())
+        if LinearAlgebra.LAPACK.version() < v"3.12.0"
+            algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+        else
+            algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
+                    LAPACK_Jacobi())
+        end
+        @testset "algorithm $alg" for alg in algs
             n > m && alg isa LAPACK_Jacobi && continue # not supported
             minmn = min(m, n)
             A = randn(rng, T, m, n)
@@ -74,10 +78,15 @@ end
 @testset "svd_trunc! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
+    if LinearAlgebra.LAPACK.version() < v"3.12.0"
+        algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+    else
+        algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
+                LAPACK_Jacobi())
+    end
+
     @testset "size ($m, $n)" for n in (37, m, 63)
-        @testset "algorithm $alg" for alg in
-                                      (LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
-                                       LAPACK_Bisection(), LAPACK_Jacobi())
+        @testset "algorithm $alg" for alg in algs
             n > m && alg isa LAPACK_Jacobi && continue # not supported
             A = randn(rng, T, m, n)
             S₀ = svd_vals(A)

@@ -38,36 +38,20 @@ end
         r = m - 2
         s = 1 + sqrt(eps(real(T)))
 
-        D, V = @constinferred eigh_trunc(A; alg, trunc=truncrank(r))
-        @test length(diagview(D)) == r
-        @test LinearAlgebra.opnorm(A - V * D * V') ≈ D₀[r + 1]
+        D1, V1 = @constinferred eigh_trunc(A; alg, trunc=truncrank(r))
+        @test length(diagview(D1)) == r
+        @test V1' * V1 ≈ I
+        @test A * V1 ≈ V1 * D1
+        @test LinearAlgebra.opnorm(A - V1 * D1 * V1') ≈ D₀[r + 1]
 
         alg2 = TruncatedAlgorithm(alg, trunctol(s * D₀[r + 1]))
         D2, V2 = @constinferred eigh_trunc(A, alg2)
         @test length(diagview(D2)) == r
+        @test V2' * V2 ≈ I
+        @test A * V2 ≈ V2 * D2
 
-        # TODO: truncation with "global" knowledge (rtol)
-        # D, V = @constinferred eigh_trunc!(copy!(Ac, A); alg=alg,
-        #                                   rtol=s * D₀[r + 1] / D₀[1])
-        # @test length(D) == r
-        #
-        # r1 = m - 6
-        # r2 = m - 4
-        # r3 = m - 2
-        # D, V = @constinferred eigh_trunc!(copy!(Ac, A); alg=alg,
-        #                                   rank=r1,
-        #                                   atol=s * D₀[r2 + 1],
-        #                                   rtol=s * D₀[r3 + 1] / D₀[1])
-        # @test length(D) == r1
-        # D, V = @constinferred eigh_trunc!(copy!(Ac, A); alg=alg,
-        #                                   rank=r2,
-        #                                   atol=s * D₀[r3 + 1],
-        #                                   rtol=s * D₀[r1 + 1] / D₀[1])
-        # @test length(D) == r1
-        # D, V = @constinferred eigh_trunc!(copy!(Ac, A); alg=alg,
-        #                                   rank=r3,
-        #                                   atol=s * D₀[r1 + 1],
-        #                                   rtol=s * D₀[r2 + 1] / D₀[1])
-        # @test length(D) == r1
+        # test for same subspace
+        @test V1 * (V1' * V2) ≈ V2
+        @test V2 * (V2' * V1) ≈ V1
     end
 end
