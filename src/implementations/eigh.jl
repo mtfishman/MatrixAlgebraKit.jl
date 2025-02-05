@@ -1,10 +1,3 @@
-# Eigh API
-# --------
-# TODO: export? or not export but mark as public ?
-function eigh!(A::AbstractMatrix, args...; kwargs...)
-    return eigh_full!(A, args...; kwargs...)
-end
-
 # Inputs
 # ------
 function copy_input(::typeof(eigh_full), A::AbstractMatrix)

@@ -1,6 +1,7 @@
 module MatrixAlgebraKit
 
 using LinearAlgebra: LinearAlgebra
+using LinearAlgebra: mul!, rmul!, lmul!
 using LinearAlgebra: Diagonal, diag, diagind
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!
 
@@ -14,24 +15,28 @@ export eig_full, eig_vals, eig_trunc
 export eig_full!, eig_vals!, eig_trunc!
 export schur_full, schur_vals
 export schur_full!, schur_vals!
+export left_polar, right_polar
+export left_polar!, right_polar!
 
 export truncrank, trunctol, TruncationKeepSorted, TruncationKeepFiltered
 
 include("auxiliary.jl")
 include("yalapack.jl")
-include("interface/algorithms.jl")
+include("algorithms.jl")
 include("interface/qr.jl")
 include("interface/svd.jl")
 include("interface/eig.jl")
 include("interface/eigh.jl")
 include("interface/schur.jl")
+include("interface/polar.jl")
 
-include("decompositions/decompositions.jl")
-include("decompositions/truncation.jl")
-include("decompositions/qr.jl")
-include("decompositions/svd.jl")
-include("decompositions/eig.jl")
-include("decompositions/eigh.jl")
-include("decompositions/schur.jl")
+include("implementations/decompositions.jl")
+include("implementations/truncation.jl")
+include("implementations/qr.jl")
+include("implementations/svd.jl")
+include("implementations/eig.jl")
+include("implementations/eigh.jl")
+include("implementations/schur.jl")
+include("implementations/polar.jl")
 
 end

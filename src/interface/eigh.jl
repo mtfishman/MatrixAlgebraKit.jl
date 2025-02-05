@@ -1,6 +1,15 @@
+# Eigh API
+# --------
+# TODO: export? or not export but mark as public ?
+function eigh!(A::AbstractMatrix, args...; kwargs...)
+    return eigh_full!(A, args...; kwargs...)
+end
+function eigh(A::AbstractMatrix, args...; kwargs...)
+    return eigh_full(A, args...; kwargs...)
+end
+
 # Eigh functions
 # --------------
-
 # TODO: kwargs for sorting eigenvalues?
 
 docs_eigh_note = """

@@ -1,3 +1,13 @@
+# SVD API
+# -------
+# TODO: export? or not export but mark as public ?
+function svd!(A::AbstractMatrix, args...; kwargs...)
+    return svd_compact!(A, args...; kwargs...)
+end
+function svd(A::AbstractMatrix, args...; kwargs...)
+    return svd_compact(A, args...; kwargs...)
+end
+
 # SVD functions
 # -------------
 """
@@ -131,6 +141,5 @@ end
 
 # Default to LAPACK SDD for `StridedMatrix{<:BlasFloat}`
 function default_svd_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
-    isempty(kwargs) || throw(ArgumentError("Unexpected kwargs: $kwargs"))
     return LAPACK_DivideAndConquer(; kwargs...)
 end
