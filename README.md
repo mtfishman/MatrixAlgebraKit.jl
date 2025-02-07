@@ -10,7 +10,7 @@ A Julia interface for matrix algebra, with a focus on performance, flexibility a
 [docs-stable-url]: https://QuantumKitHub.github.io/MatrixAlgebraKit.jl/stable
 
 [docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[docs-dev-url]: https://QuantumKitHub.github.io/MatrixAlgebraKit.jl/latest
+[docs-dev-url]: https://QuantumKitHub.github.io/MatrixAlgebraKit.jl/dev
 
 [ci-img]: https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/actions/workflows/Tests.yml/badge.svg
 [ci-url]: https://github.com/QuantumKitHub/MatrixAlgebraKit.jl/actions/workflows/Tests.yml
