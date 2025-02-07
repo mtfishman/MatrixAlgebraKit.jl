@@ -70,7 +70,8 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     check_input(svd_full!, A, USVᴴ)
     U, S, Vᴴ = USVᴴ
     fill!(S, zero(eltype(S)))
-    minmn = min(size(A)...)
+    m, n = size(A)
+    minmn = min(m, n)
     if alg isa LAPACK_QRIteration
         isempty(alg.kwargs) ||
             throw(ArgumentError("LAPACK_QRIteration does not accept any keyword arguments"))
@@ -89,6 +90,24 @@ function svd_full!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     for i in 2:minmn
         S[i, i] = S[i, 1]
         S[i, 1] = zero(eltype(S))
+    end
+    # TODO: make this controllable using a `gaugefix` keyword argument
+    for j in 1:max(m, n)
+        if j <= minmn
+            u = view(U, :, j)
+            v = view(Vᴴ, j, :)
+            s = conj(sign(argmax(abs, u)))
+            u .*= s
+            v .*= conj(s)
+        elseif j <= m
+            u = view(U, :, j)
+            s = conj(sign(argmax(abs, u)))
+            u .*= s
+        else
+            v = view(Vᴴ, j, :)
+            s = conj(sign(argmax(abs, v)))
+            v .*= s
+        end
     end
     return USVᴴ
 end
@@ -112,6 +131,14 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
         YALAPACK.gesvj!(A, S.diag, U, Vᴴ)
     else
         throw(ArgumentError("Unsupported SVD algorithm"))
+    end
+    # TODO: make this controllable using a `gaugefix` keyword argument
+    for j in 1:size(U, 2)
+        u = view(U, :, j)
+        v = view(Vᴴ, j, :)
+        s = conj(sign(argmax(abs, u)))
+        u .*= s
+        v .*= conj(s)
     end
     return USVᴴ
 end

@@ -1,16 +1,8 @@
-function one!(A::StridedMatrix)
-    length(A) > 0 || return A
-    copyto!(A, LinearAlgebra.I)
-    return A
-end
-
-safesign(s::Real) = ifelse(s < zero(s), -one(s), +one(s))
-safesign(s::Complex) = ifelse(iszero(s), one(s), s / abs(s))
-
-safe_inv(a, tol) = abs(a) < tol ? zero(a) : inv(a)
-
 # diagind: provided by LinearAlgebra.jl
+diagview(D::Diagonal) = D.diag
+diagview(D::AbstractMatrix) = view(D, diagind(D))
 
+# triangularind
 function lowertriangularind(A::AbstractMatrix)
     Base.require_one_based_indexing(A)
     m, n = size(A)
@@ -36,6 +28,3 @@ function uppertriangularind(A::AbstractMatrix)
     end
     return I
 end
-
-diagview(D::Diagonal) = D.diag
-diagview(D::AbstractMatrix) = view(D, diagind(D))

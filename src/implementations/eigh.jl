@@ -59,6 +59,12 @@ function eigh_full!(A::AbstractMatrix, DV, alg::LAPACK_EighAlgorithm)
     else # alg isa LAPACK_Expert
         YALAPACK.heevx!(A, Dd, V; alg.kwargs...)
     end
+    # TODO: make this controllable using a `gaugefix` keyword argument
+    for j in 1:size(V, 2)
+        v = view(V, :, j)
+        s = conj(sign(argmax(abs, v)))
+        v .*= s
+    end
     return D, V
 end
 

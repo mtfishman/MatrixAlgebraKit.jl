@@ -1,7 +1,9 @@
 module MatrixAlgebraKit
 
 using LinearAlgebra: LinearAlgebra
+using LinearAlgebra: norm # TODO: eleminate if we use VectorInterface.jl?
 using LinearAlgebra: mul!, rmul!, lmul!
+using LinearAlgebra: isposdef, ishermitian
 using LinearAlgebra: Diagonal, diag, diagind
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!
 
@@ -20,7 +22,13 @@ export left_polar!, right_polar!
 
 export truncrank, trunctol, TruncationKeepSorted, TruncationKeepFiltered
 
-include("auxiliary.jl")
+include("common/defaults.jl")
+include("common/initialization.jl")
+include("common/pullbacks.jl")
+include("common/safemethods.jl")
+include("common/view.jl")
+include("common/regularinv.jl")
+
 include("yalapack.jl")
 include("algorithms.jl")
 include("interface/qr.jl")
