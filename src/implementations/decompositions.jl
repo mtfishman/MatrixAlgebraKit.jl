@@ -1,9 +1,5 @@
 # TODO: module Decompositions?
 
-function copy_input end
-function initialize_output end
-function check_input end
-
 # ==========
 # ALGORITHMS
 # ==========

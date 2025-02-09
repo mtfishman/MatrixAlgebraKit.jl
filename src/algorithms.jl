@@ -58,7 +58,8 @@ end
 
 Given some keyword arguments and an input `A`, decide on an algrithm to use for
 implementing the function `f` on inputs of type `A`.
-""" select_algorithm
+"""
+function select_algorithm end
 
 @doc """
     copy_input(f, A)
@@ -66,7 +67,8 @@ implementing the function `f` on inputs of type `A`.
 Preprocess the input `A` for a given function, such that it may be handled correctly later.
 This may include a copy whenever the implementation would destroy the original matrix,
 or a change of element type to something that is supported.
-""" copy_input
+"""
+function copy_input end
 
 @doc """
     initialize_output(f, A, alg)
@@ -74,7 +76,8 @@ or a change of element type to something that is supported.
 Whenever possible, allocate the destination for applying a given algorithm in-place.
 If this is not possible, for example when the output size is not known a priori or immutable,
 this function may return `nothing`.
-""" initialize_output
+"""
+function initialize_output end
 
 # Utility macros
 # --------------
