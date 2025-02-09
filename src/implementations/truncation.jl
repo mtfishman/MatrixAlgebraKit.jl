@@ -68,6 +68,11 @@ truncabove(atol) = TruncationKeepFiltered(≤(atol) ∘ abs)
 # truncate!
 # ---------
 # Generic implementation: `findtruncated` followed by indexing
+@doc """
+    truncate!(f, out, strategy::TruncationStrategy)
+
+Generic interface for post-truncating a decomposition, specified in `out`.
+""" truncate!
 # TODO: should we return a view?
 function truncate!(::typeof(svd_trunc!), (U, S, Vᴴ), strategy::TruncationStrategy)
     ind = findtruncated(diagview(S), strategy)
