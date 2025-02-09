@@ -85,6 +85,5 @@ end
 
 function eigh_trunc!(A::AbstractMatrix, DV, alg::TruncatedAlgorithm)
     D, V = eigh_full!(A, DV, alg.alg)
-    ind = findtruncated(diagview(D), alg.trunc)
-    return truncate!((D, V), ind)
+    return truncate!(eigh_trunc!, (D, V), alg.trunc)
 end

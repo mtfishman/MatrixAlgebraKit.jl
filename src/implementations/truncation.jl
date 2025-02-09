@@ -1,3 +1,10 @@
+"""
+    abstract type TruncationStrategy end
+
+Supertype to denote different strategies for truncated decompositions that are implemented via post-truncation.
+
+See also [`truncate!`](@ref)
+"""
 abstract type TruncationStrategy end
 
 function TruncationStrategy(; atol=nothing, rtol=nothing, maxrank=nothing)
@@ -17,6 +24,9 @@ end
 Trivial truncation strategy that keeps all values, mostly for testing purposes.
 """
 struct NoTruncation <: TruncationStrategy end
+
+# TODO: how do we deal with sorting/filters that treat zeros differently
+# since these are implicitly discarded by selecting compact/full
 
 """
     TruncationKeepSorted(howmany::Int, sortby::Function, rev::Bool)
@@ -38,18 +48,55 @@ struct TruncationKeepFiltered{F} <: TruncationStrategy
     filter::F
 end
 
+struct TruncationKeepAbove{T<:Real} <: TruncationStrategy
+    atol::T
+    rtol::T
+end
+TruncationKeepAbove(atol::Real, rtol::Real) = TruncationKeepAbove(promote(atol, rtol)...)
+
+struct TruncationKeepBelow{T<:Real} <: TruncationStrategy
+    atol::T
+    rtol::T
+end
+TruncationKeepBelow(atol::Real, rtol::Real) = TruncationKeepBelow(promote(atol, rtol)...)
+
 # TODO: better names for these functions of the above types
 truncrank(howmany::Int, by=abs, rev=true) = TruncationKeepSorted(howmany, by, rev)
 trunctol(atol) = TruncationKeepFiltered(≥(atol) ∘ abs)
+truncabove(atol) = TruncationKeepFiltered(≤(atol) ∘ abs)
 
+# truncate!
+# ---------
+# Generic implementation: `findtruncated` followed by indexing
 # TODO: should we return a view?
-function truncate!((U, S, Vᴴ)::Tuple{Vararg{AbstractMatrix,3}}, ind)
+function truncate!(::typeof(svd_trunc!), (U, S, Vᴴ), strategy::TruncationStrategy)
+    ind = findtruncated(diagview(S), strategy)
     return U[:, ind], Diagonal(diagview(S)[ind]), Vᴴ[ind, :]
 end
-function truncate!((D, V)::Tuple{Vararg{AbstractMatrix,2}}, ind)
+function truncate!(::typeof(eig_trunc!), (D, V), strategy::TruncationStrategy)
+    ind = findtruncated(diagview(D), strategy)
     return Diagonal(diagview(D)[ind]), V[:, ind]
 end
+function truncate!(::typeof(eigh_trunc!), (D, V), strategy::TruncationStrategy)
+    ind = findtruncated(diagview(D), strategy)
+    return Diagonal(diagview(D)[ind]), V[:, ind]
+end
+function truncate!(::typeof(left_null!), (U, S), strategy::TruncationStrategy)
+    # TODO: avoid allocation?
+    extended_S = vcat(diagview(S), zeros(eltype(S), abs(size(S, 1) - size(S, 2))))
+    ind = findtruncated(extended_S, strategy)
+    return U[:, ind]
+end
+function truncate!(::typeof(right_null!), (S, Vᴴ), strategy::TruncationStrategy)
+    # TODO: avoid allocation?
+    extended_S = vcat(diagview(S), zeros(eltype(S), abs(size(S, 1) - size(S, 2))))
+    ind = findtruncated(extended_S, strategy)
+    return Vᴴ[ind, :]
+end
 
+# findtruncated
+# -------------
+# specific implementations for finding truncated values
 findtruncated(values::AbstractVector, ::NoTruncation) = trues(size(values))
 
 # TODO: this may also permute the eigenvalues, decide if we want to allow this or not
@@ -61,9 +108,21 @@ function findtruncated(values::AbstractVector, strategy::TruncationKeepSorted)
     return ind # TODO: consider sort!(ind)
 end
 
+# TODO: consider if worth using that values are sorted when filter is `<` or `>`.
 function findtruncated(values::AbstractVector, strategy::TruncationKeepFiltered)
     ind = findall(strategy.filter, values)
     return ind
+end
+
+function findtruncated(values::AbstractVector, strategy::TruncationKeepBelow)
+    atol = max(strategy.atol, strategy.rtol * first(values))
+    i = @something findfirst(≤(atol), values) length(values) + 1
+    return i:length(values)
+end
+function findtruncated(values::AbstractVector, strategy::TruncationKeepAbove)
+    atol = max(strategy.atol, strategy.rtol * first(values))
+    i = @something findlast(≥(atol), values) 0
+    return 1:i
 end
 
 """
@@ -76,4 +135,3 @@ struct TruncatedAlgorithm{A,T} <: AbstractAlgorithm
     alg::A
     trunc::T
 end
-export TruncatedAlgorithm

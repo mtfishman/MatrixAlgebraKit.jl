@@ -27,13 +27,9 @@ end
 # --------------
 function left_null!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
     U, S, _ = svd_full!(A, USVᴴ, alg.alg)
-    atol = max(alg.trunc.atol, alg.trunc.rtol * first(S))
-    i = @something findfirst(≤(atol), diagview(S)) minimum(size(A)) + 1
-    return U[:, i:end]'
+    return truncate!(left_null!, (U, S), alg.trunc)'
 end
 function right_null!(A::AbstractMatrix, USVᴴ, alg::TruncatedAlgorithm)
     _, S, Vᴴ = svd_full!(A, USVᴴ, alg.alg)
-    atol = max(alg.trunc.atol, alg.trunc.rtol * first(S))
-    i = @something findfirst(≤(atol), diagview(S)) minimum(size(A)) + 1
-    return Vᴴ[i:end, :]'
+    return truncate!(right_null!, (S, Vᴴ), alg.trunc)'
 end

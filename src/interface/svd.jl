@@ -74,24 +74,6 @@ See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact) an
 """
 @functiondef svd_trunc
 
-# # TODO: could be `nullspace` with a `SVDAlgorithm` instead. 
-# # -> Yes, disable for now
-# # TODO: update docs for kwargs?
-# """
-#     svd_null(A; kwargs...) -> N
-#     svd_null(A, alg::AbstractAlgorithm) -> N
-#     svd_null!(A, [USVᴴ]; kwargs...) -> N
-#     svd_null!(A, [USVᴴ], alg::AbstractAlgorithm) -> N
-
-# Compute a basis for the nullspace of `A`, such that `A * N ≈ 0`. This is done
-# by including the singular vectors of `A` whose singular values have magnitudes
-# smaller than `max(atol, rtol*σ₁)`, where `σ₁` is the largest singular value.
-
-# See also [`svd_full(!)`](@ref svd_full), [`svd_compact(!)`](@ref svd_compact),
-# [`svd_trunc(!)`](@ref svd_trunc) and [`svd_vals(!)`](@ref svd_vals).
-# """
-# @functiondef svd_null
-
 """
     svd_vals(A; kwargs...) -> S
     svd_vals(A, alg::AbstractAlgorithm) -> S

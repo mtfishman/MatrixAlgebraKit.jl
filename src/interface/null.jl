@@ -80,7 +80,7 @@ for f in (:left_null, :right_null)
                 rtol′ = something(rtol,
                                   atol′ > 0 ? 0 :
                                   minimum(size(A)) * eps(real(float(eltype(A)))))
-                @show trunc = TruncationKeepBelow(atol′, rtol′)
+                trunc = TruncationKeepBelow(atol′, rtol′)
                 return TruncatedAlgorithm(alg_svd, trunc)
             end
         end

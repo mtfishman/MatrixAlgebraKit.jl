@@ -99,7 +99,6 @@ end
 
             s = 1 + sqrt(eps(real(T)))
             trunc2 = trunctol(s * S₀[r + 1])
-            alg2 = TruncatedAlgorithm(alg, trunc2)
 
             U2, S2, V2ᴴ = @constinferred svd_trunc(A; alg, trunc=trunctol(s * S₀[r + 1]))
             @test length(S2.diag) == r
