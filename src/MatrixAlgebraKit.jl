@@ -20,6 +20,9 @@ export schur_full!, schur_vals!
 export left_polar, right_polar
 export left_polar!, right_polar!
 
+export LAPACK_HouseholderQR, LAPACK_Simple, LAPACK_Expert, LAPACK_QRIteration,
+       LAPACK_Bisection, LAPACK_DivideAndConquer,
+       LAPACK_MultipleRelativelyRobustRepresentations, LAPACK_Jacobi
 export truncrank, trunctol, TruncationKeepSorted, TruncationKeepFiltered
 
 include("common/defaults.jl")

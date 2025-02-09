@@ -89,7 +89,6 @@ along with some utility methods.
 macro algdef(name)
     esc(quote
             const $name{K} = Algorithm{$(QuoteNode(name)),K}
-            export $name
             function $name(; kwargs...)
                 # TODO: is this necessary/useful?
                 kw = NamedTuple(kwargs) # normalize type
@@ -137,7 +136,5 @@ macro functiondef(f)
 
                    # copy documentation to both functions
                    Core.@__doc__ $f, $f!
-
-                   export $f, $f!
                end)
 end
