@@ -102,7 +102,7 @@ end
 # findtruncated
 # -------------
 # specific implementations for finding truncated values
-findtruncated(values::AbstractVector, ::NoTruncation) = trues(size(values))
+findtruncated(values::AbstractVector, ::NoTruncation) = Colon()
 
 # TODO: this may also permute the eigenvalues, decide if we want to allow this or not
 # can be solved by going to simply sorting the resulting `ind`
