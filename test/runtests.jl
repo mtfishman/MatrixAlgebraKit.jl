@@ -26,6 +26,9 @@ end
 @testset "Polar Decomposition" verbose = true begin
     include("polar.jl")
 end
+@testset "Nullspace" verbose = true begin
+    include("null.jl")
+end
 
 @testset "MatrixAlgebraKit.jl" begin
     @testset "Code quality (Aqua.jl)" begin

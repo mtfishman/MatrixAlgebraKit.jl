@@ -19,6 +19,8 @@ export schur_full, schur_vals
 export schur_full!, schur_vals!
 export left_polar, right_polar
 export left_polar!, right_polar!
+export left_null, right_null
+export left_null!, right_null!
 
 export LAPACK_HouseholderQR, LAPACK_Simple, LAPACK_Expert, LAPACK_QRIteration,
        LAPACK_Bisection, LAPACK_DivideAndConquer,
@@ -40,6 +42,7 @@ include("interface/eig.jl")
 include("interface/eigh.jl")
 include("interface/schur.jl")
 include("interface/polar.jl")
+include("interface/null.jl")
 
 include("implementations/decompositions.jl")
 include("implementations/truncation.jl")
@@ -49,5 +52,6 @@ include("implementations/eig.jl")
 include("implementations/eigh.jl")
 include("implementations/schur.jl")
 include("implementations/polar.jl")
+include("implementations/null.jl")
 
 end
