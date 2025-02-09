@@ -1,3 +1,11 @@
+"""
+    module YALAPACK
+
+Yet Another LAPACK wrapper.
+This module contains bindings for calling LAPACK functionality from Julia,
+where the main difference from the LinearAlgebra implementation is found in
+the ability to externally provide the required memory for the output objects.
+"""
 module YALAPACK # Yet another lapack wrapper
 
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, Char, LAPACK,
