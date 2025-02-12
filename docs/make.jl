@@ -24,7 +24,8 @@ plugins = []
 #                    "BlockTensorKit" => "https://lkdvos.github.io/BlockTensorKit.jl/dev/")
 # push!(plugins, links)
 
-DocMeta.setdocmeta!(MatrixAlgebraKit, :DocTestSetup, :(using MatrixAlgebraKit); recursive=true)
+DocMeta.setdocmeta!(MatrixAlgebraKit, :DocTestSetup, :(using MatrixAlgebraKit);
+                    recursive=true)
 
 mathengine = MathJax3(Dict(:loader => Dict("load" => ["[tex]/physics"]),
                            :tex => Dict("inlineMath" => [["\$", "\$"], ["\\(", "\\)"]],
@@ -36,7 +37,8 @@ makedocs(;
                                 prettyurls=get(ENV, "CI", nothing) == "true",
                                 mathengine,
                                 size_threshold=512000),
-         pages=["Home" => "index.md", "Interface" => "interface.md", "Library" => "library.md"],
+         pages=["Home" => "index.md", "User Interface" => "user_interface.md",
+                "Developer Interface" => "dev_interface.md", "Library" => "library.md"],
          checkdocs=:exports,
          doctest=true,
          plugins)
