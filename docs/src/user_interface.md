@@ -51,6 +51,25 @@ The additional configurations can be controlled with the following keyword argum
 
 ### Eigenvalue Decomposition
 
+The [Eigenvalue Decomposition](https://en.wikipedia.org/wiki/Eigendecomposition_of_a_matrix) transforms a square matrix `A` into a product `V * D * V⁻¹`.
+Equivalently, it finds `V` and `D` that satisfy `A * V = V * D`.
+
+Not all matrices can be diagonalized, and some real matrices can only be diagonalized using complex arithmetic.
+In particular, the resulting decomposition can only guaranteed to be real for real symmetric inputs `A`.
+Therefore, we provide `eig_` and `eigh_` variants, where `eig` always results in complex-valued `V` and `D`, while `eigh` requires symmetric inputs but retains the scalartype of the input.
+
+```@docs; canonical=false
+eig_full
+eig_trunc
+eig_vals
+eigh_full
+eigh_trunc
+eigh_vals
+```
+
+For the non-symmetric cases, there is [`LAPACK_Simple = LAPACK_QRIteration`](@ref LAPACK_QRIteration) and [`LAPACK_Expert = LAPACK_Bisection`](@ref LAPACK_Bisection).
+For the symmetric cases, there additionally is [`LAPACK_DivideAndConquer`](@ref) and [`LAPACK_MultipleRelativelyRobustRepresentations`](@ref).
+
 ### Schur Decomposition
 
 ### Singular Value Decomposition
