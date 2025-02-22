@@ -5,10 +5,13 @@
 # ==========
 
 # reference for naming LAPACK algorithms:
-# https://www.netlib.org/lapack/explore-html/modules.html
+# https://www.netlib.org/lapack/explore-html/topics.html
 
-# QR Decomposition
+# QR, LQ, QL, RQ Decomposition
 @algdef LAPACK_HouseholderQR
+@algdef LAPACK_HouseholderLQ
+@algdef LAPACK_HouseholderQL
+@algdef LAPACK_HouseholderRQ
 
 # General Eigenvalue Decomposition
 @algdef LAPACK_Simple

@@ -92,9 +92,9 @@ function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
             A, τ = YALAPACK.geqrf!(A)
         end
         if inplaceQ
-            Q = YALAPACK.orgqr!(A, τ)
+            Q = YALAPACK.ungqr!(A, τ)
         else
-            Q = YALAPACK.ormqr!('L', 'N', A, τ, one!(Q))
+            Q = YALAPACK.unmqr!('L', 'N', A, τ, one!(Q))
         end
     end
 

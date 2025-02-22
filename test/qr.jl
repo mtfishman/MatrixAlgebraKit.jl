@@ -11,11 +11,12 @@
         @test Q' * Q ≈ I
 
         Ac = similar(A)
-        Q2 = similar(Q)
-        noR = similar(A, min(m, n), 0)
         Q2, R2 = @constinferred qr_compact!(copy!(Ac, A), (Q, R))
         @test Q2 === Q
         @test R2 === R
+
+        Q2 = similar(Q)
+        noR = similar(A, minmn, 0)
         qr_compact!(copy!(Ac, A), (Q2, noR))
         @test Q == Q2
 
@@ -28,6 +29,9 @@
         if n <= m
             qr_compact!(copy!(Q2, A), (Q2, noR); blocksize=1) # in-place Q
             @test Q ≈ Q2
+            @test_throws ArgumentError qr_compact!(copy!(Q2, A), (Q2, R); blocksize=1)
+            @test_throws ArgumentError qr_compact!(copy!(Q2, A), (Q2, noR); positive=true)
+            @test_throws ArgumentError qr_compact!(copy!(Q2, A), (Q2, noR); blocksize=8)
         end
         # other blocking
         qr_compact!(copy!(Ac, A), (Q, R); blocksize=8)

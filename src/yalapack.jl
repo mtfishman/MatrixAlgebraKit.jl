@@ -63,51 +63,77 @@ for (getrf, getrs, elty) in ((:dgetrf_, :dgetrs_, :Float64),
     end
 end
 
-# QR factorisation
+# LQ, RQ, QL, and QR factorisation
 const DEFAULT_QR_BLOCKSIZE = 36
 default_qr_blocksize(A::AbstractMatrix) = min(size(A)..., DEFAULT_QR_BLOCKSIZE)
 
 #! format: off
-for (gelqf, gelqt, geqlf, geqrf, geqp3, geqrt, gerqf, elty, relty) in
-    ((:dgelqf_, :dgelqt_, :dgeqlf_, :dgeqrf_, :dgeqp3_, :dgeqrt_, :dgerqf_, :Float64, :Float64),
-     (:sgelqf_, :sgelqt_, :sgeqlf_, :sgeqrf_, :sgeqp3_, :sgeqrt_, :sgerqf_, :Float32, :Float32),
-     (:zgelqf_, :zgelqt_, :zgeqlf_, :zgeqrf_, :zgeqp3_, :zgeqrt_, :zgerqf_, :ComplexF64, :Float64),
-     (:cgelqf_, :cgelqt_, :cgeqlf_, :cgeqrf_, :cgeqp3_, :cgeqrt_, :cgerqf_, :ComplexF32, :Float32))
+for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3, elty, relty) in
+    ((:dgeqr_, :dgelq_, :dgeqrf_, :dgelqf_, :dgeqlf_, :dgerqf_, :dgeqrt_, :dgelqt_, :dlatsqr_, :dlaswlq_, :dgeqp3_, :Float64, :Float64),
+     (:sgeqr_, :sgelq_, :sgeqrf_, :sgelqf_, :sgeqlf_, :sgerqf_, :sgeqrt_, :sgelqt_, :slatsqr_, :slaswlq_, :sgeqp3_, :Float32, :Float32),
+     (:zgeqr_, :zgelq_, :zgeqrf_, :zgelqf_, :zgeqlf_, :zgerqf_, :zgeqrt_, :zgelqt_, :zlatsqr_, :zlaswlq_, :zgeqp3_, :ComplexF64, :Float64),
+     (:cgeqr_, :cgelq_, :cgeqrf_, :cgelqf_, :cgeqlf_, :cgerqf_, :cgeqrt_, :cgelqt_, :clatsqr_, :claswlq_, :cgeqp3_, :ComplexF32, :Float32))
 #! format: on
     @eval begin
-        # QR with block reflectors
-        #! format: off
-        function geqrt!(A::AbstractMatrix{$elty},
-                        T::AbstractMatrix{$elty}=similar(A, $elty, default_qr_blocksize(A), min(size(A)...)))
-        #! format: on
-            require_one_based_indexing(A, T)
+        # Flexible QR / LQ
+        function geqr!(A::AbstractMatrix{$elty})
+            require_one_based_indexing(A)
             chkstride1(A)
             m, n = size(A)
-            minmn = min(m, n)
-            nb = size(T, 1)
-            nb <= minmn ||
-                throw(ArgumentError(lazy"block size $nb > $minmn too large"))
-            size(T, 2) == minmn ||
-                throw(DimensionMismatch(lazy"block reflector T should have size ($nb,$minmn)"))
-            n == 0 && return A, T
-
             lda = max(1, stride(A, 2))
-            ldt = max(1, stride(T, 2))
-            work = Vector{$elty}(undef, nb * n)
-            if minmn > 0
-                info = Ref{BlasInt}()
-                ccall((@blasfunc($geqrt), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+            t = Vector{$elty}(undef, 5)
+            tsize = BlasInt(-1)
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2
+                ccall((@blasfunc($geqr), libblastrampoline), Cvoid,
+                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                        Ptr{BlasInt}),
-                      m, n, nb, A, lda,
-                      T, ldt, work,
+                      m, n, A, lda,
+                      t, tsize, work, lwork,
                       info)
                 chklapackerror(info[])
+                if i == 1
+                    tsize = BlasInt(real(t[1]))
+                    lwork = BlasInt(real(work[1]))
+                    resize!(t, tsize)
+                    resize!(work, lwork)
+                end
             end
-            return A, T
+            return A, t
         end
-        # QR
+        function gelq!(A::AbstractMatrix{$elty})
+            require_one_based_indexing(A)
+            chkstride1(A)
+            m, n = size(A)
+            lda = max(1, stride(A, 2))
+            t = Vector{$elty}(undef, 5)
+            tsize = BlasInt(-1)
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2
+                ccall((@blasfunc($gelq), libblastrampoline), Cvoid,
+                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                       Ptr{BlasInt}),
+                      m, n, A, lda,
+                      t, tsize, work, lwork,
+                      info)
+                chklapackerror(info[])
+                if i == 1
+                    tsize = BlasInt(real(t[1]))
+                    lwork = BlasInt(real(work[1]))
+                    resize!(t, tsize)
+                    resize!(work, lwork)
+                end
+            end
+            return A, t
+        end
+
+        # Classic QR / LQ / QL / RQ
         function geqrf!(A::AbstractMatrix{$elty},
                         tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
             require_one_based_indexing(A, tau)
@@ -135,6 +161,142 @@ for (gelqf, gelqt, geqlf, geqrf, geqp3, geqrt, gerqf, elty, relty) in
             end
             return A, tau
         end
+        function gelqf!(A::AbstractMatrix{$elty},
+                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
+            require_one_based_indexing(A, tau)
+            chkstride1(A, tau)
+            m, n = size(A)
+            length(tau) == min(m, n) ||
+                throw(DimensionMismatch(lazy"tau has length $(length(tau)), but needs length $(min(m,n))"))
+            n == 0 && return A, tau
+
+            lda = max(1, stride(A, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2                # first call returns lwork as work[1]
+                ccall((@blasfunc($gelqf), libblastrampoline), Cvoid,
+                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
+                      m, n, A, lda,
+                      tau, work, lwork, info)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = max(BlasInt(1), BlasInt(real(work[1])))
+                    resize!(work, lwork)
+                end
+            end
+            return A, tau
+        end
+        function geqlf!(A::AbstractMatrix{$elty},
+                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
+            require_one_based_indexing(A, tau)
+            chkstride1(A, tau)
+            m, n = size(A)
+            length(tau) == min(m, n) ||
+                throw(DimensionMismatch(lazy"tau has length $(length(tau)), but needs length $(min(m,n))"))
+            n == 0 && return A, tau
+
+            lda = max(1, stride(A, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2                # first call returns lwork as work[1]
+                ccall((@blasfunc($geqlf), libblastrampoline), Cvoid,
+                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
+                      m, n, A, lda,
+                      tau, work, lwork, info)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = max(BlasInt(1), BlasInt(real(work[1])))
+                    resize!(work, lwork)
+                end
+            end
+            return A, tau
+        end
+        function gerqf!(A::AbstractMatrix{$elty},
+                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
+            require_one_based_indexing(A, tau)
+            chkstride1(A, tau)
+            m, n = size(A)
+            length(tau) == min(m, n) ||
+                throw(DimensionMismatch(lazy"tau has length $(length(tau)), but needs length $(min(m,n))"))
+            n == 0 && return A, tau
+
+            lda = max(1, stride(A, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2                # first call returns lwork as work[1]
+                ccall((@blasfunc($gerqf), libblastrampoline), Cvoid,
+                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
+                      m, n, A, lda,
+                      tau, work, lwork, info)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = max(BlasInt(1), BlasInt(real(work[1])))
+                    resize!(work, lwork)
+                end
+            end
+            return A, tau
+        end
+
+        # QR and LQ with block reflectors
+        #! format: off
+        function geqrt!(A::AbstractMatrix{$elty},
+                        T::AbstractMatrix{$elty}=similar(A, $elty, default_qr_blocksize(A), min(size(A)...)))
+        #! format: on
+            require_one_based_indexing(A, T)
+            chkstride1(A, T)
+            m, n = size(A)
+            minmn = min(m, n)
+            nb = min(minmn, size(T, 1))
+            size(T, 2) == minmn ||
+                throw(DimensionMismatch(lazy"block reflector T should have size ($nb,$minmn)"))
+            minmn == 0 && return A, T
+            lda = max(1, stride(A, 2))
+            ldt = max(1, stride(T, 2))
+            work = Vector{$elty}(undef, nb * n)
+            info = Ref{BlasInt}()
+            ccall((@blasfunc($geqrt), libblastrampoline), Cvoid,
+                  (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                   Ptr{BlasInt}),
+                  m, n, nb, A, lda,
+                  T, ldt, work,
+                  info)
+            chklapackerror(info[])
+            return A, T
+        end
+        #! format: off
+        function gelqt!(A::AbstractMatrix{$elty},
+                        T::AbstractMatrix{$elty}=similar(A, $elty, default_qr_blocksize(A), min(size(A)...)))
+        #! format: on
+            require_one_based_indexing(A, T)
+            chkstride1(A, T)
+            m, n = size(A)
+            minmn = min(m, n)
+            mb = min(minmn, size(T, 1))
+            size(T, 2) == minmn ||
+                throw(DimensionMismatch(lazy"block reflector T should have size ($mb,$minmn)"))
+            minmn == 0 && return A, T
+            lda = max(1, stride(A, 2))
+            ldt = max(1, stride(T, 2))
+            work = Vector{$elty}(undef, mb * n)
+            info = Ref{BlasInt}()
+            ccall((@blasfunc($gelqt), libblastrampoline), Cvoid,
+                  (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                   Ptr{BlasInt}),
+                  m, n, mb, A, lda,
+                  T, ldt, work,
+                  info)
+            chklapackerror(info[])
+            return A, T
+        end
+
         # QR with column pivoting
         function geqp3!(A::AbstractMatrix{$elty},
                         tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)),
@@ -186,224 +348,56 @@ for (gelqf, gelqt, geqlf, geqrf, geqp3, geqrt, gerqf, elty, relty) in
             end
             return A, tau, jpvt
         end
-        # LQ with block reflectors
-        #! format: off
-        function gelqt!(A::AbstractMatrix{$elty},
-                        T::AbstractMatrix{$elty}=similar(A, $elty, default_qr_blocksize(A), min(size(A)...)))
-        #! format: on
-            require_one_based_indexing(A, T)
-            chkstride1(A)
-            m, n = size(A)
-            minmn = min(m, n)
-            mb = size(T, 1)
-            mb <= minmn ||
-                throw(ArgumentError(lazy"block size $mb > $minmn too large"))
-            size(T, 2) == minmn ||
-                throw(DimensionMismatch(lazy"block reflector T should have size ($mb,$minmn)"))
-            minmn == 0 && return A, T
-
-            lda = max(1, stride(A, 2))
-            ldt = max(1, stride(T, 2))
-            work = Vector{$elty}(undef, mb * n)
-            info = Ref{BlasInt}()
-            ccall((@blasfunc($gelqt), libblastrampoline), Cvoid,
-                  (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
-                   Ptr{BlasInt}),
-                  m, n, mb, A, lda,
-                  T, ldt, work,
-                  info)
-            chklapackerror(info[])
-            return A, T
-        end
-        # LQ
-        function gelqf!(A::AbstractMatrix{$elty},
-                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
-            require_one_based_indexing(A, tau)
-            chkstride1(A, tau)
-            m, n = size(A)
-            length(tau) == min(m, n) ||
-                throw(DimensionMismatch(lazy"tau has length $(length(tau)), but needs length $(min(m,n))"))
-            n == 0 && return A, tau
-
-            lda = max(1, stride(A, 2))
-            lwork = BlasInt(-1)
-            work = Vector{$elty}(undef, 1)
-            info = Ref{BlasInt}()
-            for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($gelqf), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, A, lda,
-                      tau, work, lwork, info)
-                chklapackerror(info[])
-                if i == 1
-                    lwork = BlasInt(real(work[1]))
-                    resize!(work, lwork)
-                end
-            end
-            return A, tau
-        end
-        # QL
-        function geqlf!(A::AbstractMatrix{$elty},
-                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
-            require_one_based_indexing(A, tau)
-            chkstride1(A, tau)
-            m, n = size(A)
-            length(tau) == min(m, n) ||
-                throw(DimensionMismatch(lazy"tau has length $(length(tau)), but needs length $(min(m,n))"))
-            n == 0 && return A, tau
-
-            lda = max(1, stride(A, 2))
-            lwork = BlasInt(-1)
-            work = Vector{$elty}(undef, 1)
-            info = Ref{BlasInt}()
-            for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($geqlf), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, A, lda,
-                      tau, work, lwork, info)
-                chklapackerror(info[])
-                if i == 1
-                    lwork = BlasInt(real(work[1]))
-                    resize!(work, lwork)
-                end
-            end
-            return A, tau
-        end
-        # RQ
-        function gerqf!(A::AbstractMatrix{$elty},
-                        tau::AbstractVector{$elty}=similar(A, $elty, min(size(A)...)))
-            require_one_based_indexing(A, tau)
-            chkstride1(A, tau)
-            m, n = size(A)
-            length(tau) == min(m, n) ||
-                throw(DimensionMismatch(lazy"tau has length $(length(tau)), but needs length $(min(m,n))"))
-            n == 0 && return A, tau
-
-            lda = max(1, stride(A, 2))
-            lwork = BlasInt(-1)
-            work = Vector{$elty}(undef, 1)
-            info = Ref{BlasInt}()
-            for i in 1:2                # first call returns lwork as work[1]
-                ccall((@blasfunc($gerqf), libblastrampoline), Cvoid,
-                      (Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
-                      m, n, A, lda,
-                      tau, work, lwork, info)
-                chklapackerror(info[])
-                if i == 1
-                    lwork = max(BlasInt(m), BlasInt(real(work[1])))
-                    resize!(work, lwork)
-                end
-            end
-            return A, tau
-        end
     end
 end
 
 # Generate or multiply with Q factor
 
 #! format: off
-for (orglq, orgqr, orgql, orgrq, ormlq, ormqr, ormql, ormrq, gemqrt, elty) in
-    ((:dorglq_, :dorgqr_, :dorgql_, :dorgrq_, :dormlq_, :dormqr_, :dormql_, :dormrq_, :dgemqrt_, :Float64),
-     (:sorglq_, :sorgqr_, :sorgql_, :sorgrq_, :sormlq_, :sormqr_, :sormql_, :sormrq_, :sgemqrt_, :Float32),
-     (:zunglq_, :zungqr_, :zungql_, :zungrq_, :zunmlq_, :zunmqr_, :zunmql_, :zunmrq_, :zgemqrt_, :ComplexF64),
-     (:cunglq_, :cungqr_, :cungql_, :cungrq_, :cunmlq_, :cunmqr_, :cunmql_, :cunmrq_, :cgemqrt_, :ComplexF32))
+for (gemqr, gemlq, ungqr, unglq, ungql, ungrq, unmqr, unmlq, unmql, unmrq, gemqrt, gemlqt, elty) in
+    ((:dgemqr_, :dgemlq_, :dorgqr_, :dorglq_, :dorgql_, :dorgrq_, :dormqr_, :dormlq_, :dormql_, :dormrq_, :dgemqrt_, :dgemlqt_, :Float64),
+     (:sgemqr_, :sgemlq_, :sorgqr_, :sorglq_, :sorgql_, :sorgrq_, :sormqr_, :sormlq_, :sormql_, :sormrq_, :sgemqrt_, :sgemlqt_, :Float32),
+     (:zgemqr_, :zgemlq_, :zungqr_, :zunglq_, :zungql_, :zungrq_, :zunmqr_, :zunmlq_, :zunmql_, :zunmrq_, :zgemqrt_, :zgemlqt_, :ComplexF64),
+     (:cgemqr_, :cgemlq_, :cungqr_, :cunglq_, :cungql_, :cungrq_, :cunmqr_, :cunmlq_, :cunmql_, :cunmrq_, :cgemqrt_, :cgemlqt_, :ComplexF32))
 #! format: on
     @eval begin
-        # Multiply with blocked QR factor
-        function gemqrt!(side::AbstractChar, trans::AbstractChar,
-                         V::AbstractMatrix{$elty}, T::AbstractMatrix{$elty},
-                         C::AbstractVecOrMat{$elty})
-            require_one_based_indexing(V, T, C)
-            chkstride1(V, T, C)
+        # multiply with Q factor of flexible QR / LQ
+        function gemqr!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
+                        T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty})
+            require_one_based_indexing(A, C)
+            chkstride1(A, C)
             chktrans(trans)
             chkside(side)
-            m, n = size(C, 1), size(C, 2)
-            nb, k = size(T)
-            if k == 0
-                return C
-            end
-            if side == 'L'
-                if !(0 <= k <= m)
-                    throw(DimensionMismatch(lazy"wrong value for k = $k: must be between 0 and $m"))
-                end
-                if m != size(V, 1)
-                    throw(DimensionMismatch(lazy"first dimensions of C, $m, and V, $(size(V,1)) must match"))
-                end
-                wss = n * k
-            elseif side == 'R'
-                if !(0 <= k <= n)
-                    throw(DimensionMismatch(lazy"wrong value for k = $k: must be between 0 and $n"))
-                end
-                if n != size(V, 1)
-                    throw(DimensionMismatch(lazy"second dimension of C, $n, and first dimension of V, $(size(V,1)) must match"))
-                end
-                wss = m * k
-            end
-            if !(1 <= nb <= k)
-                throw(DimensionMismatch(lazy"wrong value for nb = $nb, which must be between 1 and $k"))
-            end
-            ldv = max(1, stride(V, 2))
-            ldt = max(1, stride(T, 2))
-            ldc = max(1, stride(C, 2))
-            work = Vector{$elty}(undef, wss)
-            info = Ref{BlasInt}()
-            ccall((@blasfunc($gemqrt), libblastrampoline), Cvoid,
-                  (Ref{UInt8}, Ref{UInt8},
-                   Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ref{BlasInt},
-                   Ptr{$elty}, Ptr{BlasInt}, Clong, Clong),
-                  side, trans,
-                  m, n, k, nb,
-                  V, ldv, T, ldt,
-                  C, ldc,
-                  work, info, 1, 1)
-            chklapackerror(info[])
-            return C
-        end
-        # Multiply with unblocked QR factor
-        function ormqr!(side::AbstractChar, trans::AbstractChar,
-                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
-                        C::AbstractVecOrMat{$elty})
-            require_one_based_indexing(A, tau, C)
-            chkstride1(A, C, tau)
-            chktrans(trans)
-            chkside(side)
-            m, n = size(C, 1), size(C, 2)
-            mA = size(A, 1)
-            k = length(tau)
-            if side == 'L' && m != mA
+            mC, nC = size(C, 1), size(C, 2) # C could be a vector so explicitly call size(C, 2)
+            mA, nA = size(A)
+            k = min(mA, nA)
+
+            if side == 'L' && mC != mA
                 throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $m, must equal the first dimension of A, $mA"))
             end
-            if side == 'R' && n != mA
+            if side == 'R' && nC != mA
                 throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $n, must equal the first dimension of A, $mA"))
             end
-            if side == 'L' && k > m
+            if side == 'L' && k > mC
                 throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= m = $m"))
             end
-            if side == 'R' && k > n
+            if side == 'R' && k > nC
                 throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= n = $n"))
             end
             lda = max(1, stride(A, 2))
             ldc = max(1, stride(C, 2))
+            tsize = length(T)
             work = Vector{$elty}(undef, 1)
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($ormqr), libblastrampoline), Cvoid,
-                      (Ref{UInt8}, Ref{UInt8},
-                       Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                ccall((@blasfunc($gemqr), libblastrampoline), Cvoid,
+                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                        Ptr{$elty}, Ref{BlasInt},
-                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt},
-                       Clong, Clong),
-                      side, trans,
-                      m, n, k,
-                      A, lda, tau,
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
+                      side, trans, mC, nC, k,
+                      A, lda, T, tsize,
                       C, ldc,
                       work, lwork, info, 1, 1)
                 chklapackerror(info[])
@@ -414,8 +408,55 @@ for (orglq, orgqr, orgql, orgrq, ormlq, ormqr, ormql, ormrq, gemqrt, elty) in
             end
             return C
         end
-        # Build Q factor in the space of `A`
-        function orgqr!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
+        function gemlq!(side::AbstractChar, trans::AbstractChar, A::AbstractMatrix{$elty},
+                        T::AbstractVector{$elty}, C::AbstractVecOrMat{$elty})
+            require_one_based_indexing(A, C)
+            chkstride1(A, C)
+            chktrans(trans)
+            chkside(side)
+            mC, nC = size(C, 1), size(C, 2) # C could be a vector so explicitly call size(C, 2)
+            mA, nA = size(A)
+            k = min(mA, nA)
+
+            if side == 'L' && mC != nA
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $m, must equal the second dimension of A, $nA"))
+            end
+            if side == 'R' && nC != nA
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $n, must equal the second dimension of A, $nA"))
+            end
+            if side == 'L' && k > mC
+                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= m = $m"))
+            end
+            if side == 'R' && k > nC
+                throw(DimensionMismatch(lazy"invalid number of reflectors: k = $k should be <= n = $n"))
+            end
+            lda = max(1, stride(A, 2))
+            ldc = max(1, stride(C, 2))
+            tsize = length(T)
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                ccall((@blasfunc($gemlq), libblastrampoline), Cvoid,
+                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
+                      side, trans, mC, nC, k,
+                      A, lda, T, tsize,
+                      C, ldc,
+                      work, lwork, info, 1, 1)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return C
+        end
+
+        # Build Q factor of classic QR / LQ / QL / RQ in the space of `A`
+        function ungqr!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
             require_one_based_indexing(A, tau)
             chkstride1(A, tau)
             m, n = size(A)
@@ -430,7 +471,7 @@ for (orglq, orgqr, orgql, orgrq, ormlq, ormqr, ormql, ormrq, gemqrt, elty) in
             lwork = BlasInt(-1)
             info = Ref{BlasInt}()
             for i in 1:2  # first call returns lwork as work[1]
-                ccall((@blasfunc($orgqr), libblastrampoline), Cvoid,
+                ccall((@blasfunc($ungqr), libblastrampoline), Cvoid,
                       (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
                        Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
                        Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
@@ -444,6 +485,350 @@ for (orglq, orgqr, orgql, orgrq, ormlq, ormqr, ormql, ormrq, gemqrt, elty) in
                 end
             end
             return A
+        end
+        function unglq!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
+            require_one_based_indexing(A, tau)
+            chkstride1(A, tau)
+            m, n = size(A)
+            k = length(tau)
+            n < m &&
+                throw(DimensionMismatch(lazy"number of rows $m must be <= number of columns $n"))
+            m < k &&
+                throw(DimensionMismatch(lazy"tau has length $k, but needs (at most) length $m"))
+
+            lda = max(1, stride(A, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                ccall((@blasfunc($unglq), libblastrampoline), Cvoid,
+                      (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
+                      m, n, k,
+                      A, lda, tau,
+                      work, lwork, info)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return A
+        end
+        function ungql!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
+            require_one_based_indexing(A, tau)
+            chkstride1(A, tau)
+            m, n = size(A)
+            k = length(tau)
+            m < n &&
+                throw(DimensionMismatch(lazy"number of rows $m must be >= number of columns $n"))
+            n < k &&
+                throw(DimensionMismatch(lazy"tau has length $k, but needs (at most) length $n"))
+
+            lda = max(1, stride(A, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                ccall((@blasfunc($ungql), libblastrampoline), Cvoid,
+                      (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
+                      m, n, k,
+                      A, lda, tau,
+                      work, lwork, info)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return A
+        end
+        function ungrq!(A::AbstractMatrix{$elty}, tau::AbstractVector{$elty})
+            require_one_based_indexing(A, tau)
+            chkstride1(A, tau)
+            m, n = size(A)
+            k = length(tau)
+            n < m &&
+                throw(DimensionMismatch(lazy"number of rows $m must be <= number of columns $n"))
+            m < k &&
+                throw(DimensionMismatch(lazy"tau has length $k, but needs (at most) length $m"))
+
+            lda = max(1, stride(A, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                ccall((@blasfunc($ungrq), libblastrampoline), Cvoid,
+                      (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}),
+                      m, n, k,
+                      A, lda, tau,
+                      work, lwork, info)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return A
+        end
+
+        # multiply with Q factor of classic QR / LQ / QL / RQ
+        function unmqr!(side::AbstractChar, trans::AbstractChar,
+                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
+                        C::AbstractVecOrMat{$elty})
+            require_one_based_indexing(A, tau, C)
+            chkstride1(A, C, tau)
+            chktrans(trans)
+            chkside(side)
+            mC, nC = size(C, 1), size(C, 2)
+            mA, nA = size(A)
+            k = length(tau)
+            if k > min(mA, nA)
+                throw(DimensionMismatch(lazy"invalid number of reflectors: should equal the minimum of the dimensions of A"))
+            end
+            if side == 'L' && mC != mA
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $mC, must equal the first dimension of A, $mA"))
+            end
+            if side == 'R' && nC != mA
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $nC, must equal the first dimension of A, $mA"))
+            end
+            lda = max(1, stride(A, 2))
+            ldc = max(1, stride(C, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                ccall((@blasfunc($unmqr), libblastrampoline), Cvoid,
+                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                       Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
+                      side, trans, mC, nC, k,
+                      A, lda, tau,
+                      C, ldc,
+                      work, lwork, info, 1, 1)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return C
+        end
+        function unmlq!(side::AbstractChar, trans::AbstractChar,
+                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
+                        C::AbstractVecOrMat{$elty})
+            require_one_based_indexing(A, tau, C)
+            chkstride1(A, C, tau)
+            chktrans(trans)
+            chkside(side)
+            mC, nC = size(C, 1), size(C, 2)
+            mA, nA = size(A)
+            k = length(tau)
+            if k > min(mA, nA)
+                throw(DimensionMismatch(lazy"invalid number of reflectors: should equal the minimum of the dimensions of A"))
+            end
+            if side == 'L' && mC != nA
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $mC, must equal the second dimension of A, $nA"))
+            end
+            if side == 'R' && nC != nA
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $nC, must equal the second dimension of A, $nA"))
+            end
+            lda = max(1, stride(A, 2))
+            ldc = max(1, stride(C, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                ccall((@blasfunc($unmlq), libblastrampoline), Cvoid,
+                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                       Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
+                      side, trans, mC, nC, k,
+                      A, lda, tau,
+                      C, ldc,
+                      work, lwork, info, 1, 1)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return C
+        end
+        function unmql!(side::AbstractChar, trans::AbstractChar,
+                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
+                        C::AbstractVecOrMat{$elty})
+            require_one_based_indexing(A, tau, C)
+            chkstride1(A, C, tau)
+            chktrans(trans)
+            chkside(side)
+            mC, nC = size(C, 1), size(C, 2)
+            mA, nA = size(A)
+            k = length(tau)
+            if k > min(mA, nA)
+                throw(DimensionMismatch(lazy"invalid number of reflectors: should equal the minimum of the dimensions of A"))
+            end
+            if side == 'L' && mC != mA
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $mC, must equal the first dimension of A, $mA"))
+            end
+            if side == 'R' && nC != mA
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $nC, must equal the first dimension of A, $mA"))
+            end
+            lda = max(1, stride(A, 2))
+            ldc = max(1, stride(C, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                ccall((@blasfunc($unmql), libblastrampoline), Cvoid,
+                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                       Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
+                      side, trans, mC, nC, k,
+                      A, lda, tau,
+                      C, ldc,
+                      work, lwork, info, 1, 1)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return C
+        end
+        function unmrq!(side::AbstractChar, trans::AbstractChar,
+                        A::AbstractMatrix{$elty}, tau::AbstractVector{$elty},
+                        C::AbstractVecOrMat{$elty})
+            require_one_based_indexing(A, tau, C)
+            chkstride1(A, C, tau)
+            chktrans(trans)
+            chkside(side)
+            mC, nC = size(C, 1), size(C, 2)
+            mA, nA = size(A)
+            k = length(tau)
+            if k > min(mA, nA)
+                throw(DimensionMismatch(lazy"invalid number of reflectors: should equal the minimum of the dimensions of A"))
+            end
+            if side == 'L' && mC != nA
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $mC, must equal the second dimension of A, $nA"))
+            end
+            if side == 'R' && nC != nA
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $nC, must equal the second dimension of A, $nA"))
+            end
+            lda = max(1, stride(A, 2))
+            ldc = max(1, stride(C, 2))
+            work = Vector{$elty}(undef, 1)
+            lwork = BlasInt(-1)
+            info = Ref{BlasInt}()
+            for i in 1:2  # first call returns lwork as work[1]
+                ccall((@blasfunc($unmrq), libblastrampoline), Cvoid,
+                      (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{$elty},
+                       Ptr{$elty}, Ref{BlasInt},
+                       Ptr{$elty}, Ref{BlasInt}, Ptr{BlasInt}, Clong, Clong),
+                      side, trans, mC, nC, k,
+                      A, lda, tau,
+                      C, ldc,
+                      work, lwork, info, 1, 1)
+                chklapackerror(info[])
+                if i == 1
+                    lwork = BlasInt(real(work[1]))
+                    resize!(work, lwork)
+                end
+            end
+            return C
+        end
+
+        # Multiply with blocked Q factor from QR / LQ
+        function gemqrt!(side::AbstractChar, trans::AbstractChar,
+                         V::AbstractMatrix{$elty}, T::AbstractMatrix{$elty},
+                         C::AbstractVecOrMat{$elty})
+            require_one_based_indexing(V, T, C)
+            chkstride1(V, T, C)
+            chktrans(trans)
+            chkside(side)
+            mC, nC = size(C, 1), size(C, 2)
+            mA, nA = size(V)
+            nb, k = size(T)
+            if k > min(mA, nA)
+                throw(DimensionMismatch(lazy"invalid number of reflectors: should equal the minimum of the dimensions of A"))
+            end
+            if side == 'L' && mC != mA
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $mC, must equal the first dimension of A, $mA"))
+            end
+            if side == 'R' && nC != mA
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $nC, must equal the first dimension of A, $mA"))
+            end
+            if !(1 <= nb <= k)
+                throw(DimensionMismatch(lazy"wrong value for nb = $nb, which must be between 1 and $k"))
+            end
+            ldv = max(1, stride(V, 2))
+            ldt = max(1, stride(T, 2))
+            ldc = max(1, stride(C, 2))
+            work = Vector{$elty}(undef, nb * (side == 'L' ? nC : mC))
+            info = Ref{BlasInt}()
+            ccall((@blasfunc($gemqrt), libblastrampoline), Cvoid,
+                  (Ref{UInt8}, Ref{UInt8},
+                   Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                   Ptr{$elty}, Ref{BlasInt},
+                   Ptr{$elty}, Ptr{BlasInt}, Clong, Clong),
+                  side, trans,
+                  mC, nC, k, nb,
+                  V, ldv, T, ldt,
+                  C, ldc,
+                  work, info, 1, 1)
+            chklapackerror(info[])
+            return C
+        end
+        function gemlqt!(side::AbstractChar, trans::AbstractChar,
+                         V::AbstractMatrix{$elty}, T::AbstractMatrix{$elty},
+                         C::AbstractVecOrMat{$elty})
+            require_one_based_indexing(V, T, C)
+            chkstride1(V, T, C)
+            chktrans(trans)
+            chkside(side)
+            mC, nC = size(C, 1), size(C, 2)
+            mA, nA = size(V)
+            mb, k = size(T)
+            if k > min(mA, nA)
+                throw(DimensionMismatch(lazy"invalid number of reflectors: should equal the minimum of the dimensions of A"))
+            end
+            if side == 'L' && mC != nA
+                throw(DimensionMismatch(lazy"for a left-sided multiplication, the first dimension of C, $mC, must equal the second dimension of A, $nA"))
+            end
+            if side == 'R' && nC != nA
+                throw(DimensionMismatch(lazy"for a right-sided multiplication, the second dimension of C, $nC, must equal the second dimension of A, $nA"))
+            end
+            if !(1 <= mb <= k)
+                throw(DimensionMismatch(lazy"wrong value for mb = $mb, which must be between 1 and $k"))
+            end
+            ldv = max(1, stride(V, 2))
+            ldt = max(1, stride(T, 2))
+            ldc = max(1, stride(C, 2))
+            work = Vector{$elty}(undef, mb * (side == 'L' ? nC : mC))
+            info = Ref{BlasInt}()
+            ccall((@blasfunc($gemlqt), libblastrampoline), Cvoid,
+                  (Ref{UInt8}, Ref{UInt8},
+                   Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt},
+                   Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                   Ptr{$elty}, Ref{BlasInt},
+                   Ptr{$elty}, Ptr{BlasInt}, Clong, Clong),
+                  side, trans,
+                  mC, nC, k, mb,
+                  V, ldv, T, ldt,
+                  C, ldc,
+                  work, info, 1, 1)
+            chklapackerror(info[])
+            return C
         end
     end
 end

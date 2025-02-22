@@ -8,8 +8,9 @@ using LinearAlgebra: LinearAlgebra, diag, Diagonal, I, isposdef, diagind
 
 using MatrixAlgebraKit: diagview
 
-@testset "QR Decomposition" verbose = true begin
+@testset "QR / LQ Decomposition" verbose = true begin
     include("qr.jl")
+    include("lq.jl")
 end
 @testset "Singular Value Decomposition" verbose = true begin
     include("svd.jl")

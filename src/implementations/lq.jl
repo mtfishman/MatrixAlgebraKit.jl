@@ -1,0 +1,119 @@
+# Inputs
+# ------
+function copy_input(::typeof(lq_full), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
+end
+function copy_input(::typeof(lq_compact), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
+end
+
+function check_input(::typeof(lq_full!), A::AbstractMatrix, LQ)
+    m, n = size(A)
+    L, Q = LQ
+    (Q isa AbstractMatrix && eltype(Q) == eltype(A) && size(Q) == (n, n)) ||
+        throw(DimensionMismatch("Full unitary matrix Q must be square with equal number of columns as A"))
+    (L isa AbstractMatrix && eltype(L) == eltype(A) && (isempty(L) || size(L) == (m, n))) ||
+        throw(DimensionMismatch("Lower triangular matrix L must have size equal to A"))
+    return nothing
+end
+function check_input(::typeof(lq_compact!), A::AbstractMatrix, LQ)
+    m, n = size(A)
+    if m <= n
+        L, Q = LQ
+        (Q isa AbstractMatrix && eltype(Q) == eltype(A) && size(Q) == (m, n)) ||
+            throw(DimensionMismatch("Isometric Q must have size equal to A"))
+        (L isa AbstractMatrix && eltype(L) == eltype(A) &&
+         (isempty(L) || size(L) == (m, m))) ||
+            throw(DimensionMismatch("Lower triangular matrix L must be square with equal number of columns as A"))
+    else
+        check_input(lq_full!, A, LQ)
+    end
+end
+
+# Outputs
+# -------
+function initialize_output(::typeof(lq_full!), A::AbstractMatrix, ::LAPACK_HouseholderLQ)
+    m, n = size(A)
+    L = similar(A, (m, n))
+    Q = similar(A, (n, n))
+    return (L, Q)
+end
+function initialize_output(::typeof(lq_compact!), A::AbstractMatrix, ::LAPACK_HouseholderLQ)
+    m, n = size(A)
+    minmn = min(m, n)
+    L = similar(A, (m, minmn))
+    Q = similar(A, (minmn, n))
+    return (L, Q)
+end
+
+# Implementation
+# --------------
+# actual implementation
+function lq_full!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
+    check_input(lq_full!, A, LQ)
+    L, Q = LQ
+    _lapack_lq!(A, L, Q; alg.kwargs...)
+    return L, Q
+end
+function lq_compact!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
+    check_input(lq_compact!, A, LQ)
+    L, Q = LQ
+    _lapack_lq!(A, L, Q; alg.kwargs...)
+    return L, Q
+end
+function _lapack_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
+                     positive=false,
+                     pivoted=false,
+                     blocksize=((pivoted || A === Q) ? 1 : YALAPACK.default_qr_blocksize(A)))
+    m, n = size(A)
+    minmn = min(m, n)
+    computeL = length(L) > 0
+    inplaceQ = Q === A
+
+    if pivoted
+        throw(ArgumentError("LAPACK does not provide an implementation for a pivoted LQ decomposition"))
+    end
+    if inplaceQ && (computeL || positive || blocksize > 1 || n < m)
+        throw(ArgumentError("inplace Q only supported if matrix is wide (`m <= n`), L is not required, and using the unblocked algorithm (`blocksize=1`) with `positive=false`"))
+    end
+
+    if blocksize > 1
+        mb = min(minmn, blocksize)
+        if computeL # first use L as space for T
+            A, T = YALAPACK.gelqt!(A, view(L, 1:mb, 1:minmn))
+        else
+            A, T = YALAPACK.gelqt!(A, similar(A, mb, minmn))
+        end
+        Q = YALAPACK.gemlqt!('R', 'N', A, T, one!(Q))
+    else
+        A, τ = YALAPACK.gelqf!(A)
+        if inplaceQ
+            Q = YALAPACK.unglq!(A, τ)
+        else
+            Q = YALAPACK.unmlq!('R', 'N', A, τ, one!(Q))
+        end
+    end
+
+    if positive # already fix Q even if we do not need R
+        @inbounds for j in 1:n
+            @simd for i in 1:minmn
+                s = safesign(A[i, i])
+                Q[i, j] *= s
+            end
+        end
+    end
+
+    if computeL
+        L̃ = tril!(view(A, axes(L)...))
+        if positive
+            @inbounds for j in 1:minmn
+                s = conj(safesign(L̃[j, j]))
+                @simd for i in j:m
+                    L̃[i, j] = L̃[i, j] * s
+                end
+            end
+        end
+        copyto!(L, L̃)
+    end
+    return L, Q
+end
