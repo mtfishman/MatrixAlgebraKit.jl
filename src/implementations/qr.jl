@@ -6,14 +6,17 @@ end
 function copy_input(::typeof(qr_compact), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
+function copy_input(::typeof(qr_null), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
+end
 
 function check_input(::typeof(qr_full!), A::AbstractMatrix, QR)
     m, n = size(A)
     Q, R = QR
     (Q isa AbstractMatrix && eltype(Q) == eltype(A) && size(Q) == (m, m)) ||
-        throw(DimensionMismatch("Full unitary matrix `Q` must be square with equal number of rows as A"))
+        throw(DimensionMismatch("Full unitary matrix Q must be square with equal number of rows as A"))
     (R isa AbstractMatrix && eltype(R) == eltype(A) && (isempty(R) || size(R) == (m, n))) ||
-        throw(DimensionMismatch("Upper triangular matrix `R` must have size equal to A"))
+        throw(DimensionMismatch("Upper triangular matrix R must have size equal to A"))
     return nothing
 end
 function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR)
@@ -21,13 +24,20 @@ function check_input(::typeof(qr_compact!), A::AbstractMatrix, QR)
     if n <= m
         Q, R = QR
         (Q isa AbstractMatrix && eltype(Q) == eltype(A) && size(Q) == (m, n)) ||
-            throw(DimensionMismatch("Isometric `Q` must have size equal to A"))
+            throw(DimensionMismatch("Isometric Q must have size equal to A"))
         (R isa AbstractMatrix && eltype(R) == eltype(A) &&
          (isempty(R) || size(R) == (n, n))) ||
-            throw(DimensionMismatch("Upper triangular matrix `R` must be square with equal number of columns as A"))
+            throw(DimensionMismatch("Upper triangular matrix R must be square with equal number of columns as A"))
     else
         check_input(qr_full!, A, QR)
     end
+end
+function check_input(::typeof(qr_null!), A::AbstractMatrix, N)
+    m, n = size(A)
+    minmn = min(m, n)
+    (N isa AbstractMatrix && eltype(N) == eltype(A) && size(N) == (m, m - minmn)) ||
+        throw(DimensionMismatch("Matrix N must have a the same eltype as A and a size such that [A N] is square"))
+    return nothing
 end
 
 # Outputs
@@ -45,6 +55,12 @@ function initialize_output(::typeof(qr_compact!), A::AbstractMatrix, ::LAPACK_Ho
     R = similar(A, (minmn, n))
     return (Q, R)
 end
+function initialize_output(::typeof(qr_null!), A::AbstractMatrix, ::LAPACK_HouseholderQR)
+    m, n = size(A)
+    minmn = min(m, n)
+    N = similar(A, (m, m - minmn))
+    return N
+end
 
 # Implementation
 # --------------
@@ -61,6 +77,12 @@ function qr_compact!(A::AbstractMatrix, QR, alg::LAPACK_HouseholderQR)
     _lapack_qr!(A, Q, R; alg.kwargs...)
     return Q, R
 end
+function qr_null!(A::AbstractMatrix, N, alg::LAPACK_HouseholderQR)
+    check_input(qr_null!, A, N)
+    _lapack_qr_null!(A, N; alg.kwargs...)
+    return N
+end
+
 function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
                      positive=false,
                      pivoted=false,
@@ -124,4 +146,23 @@ function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
         end
     end
     return Q, R
+end
+
+function _lapack_qr_null!(A::AbstractMatrix, N::AbstractMatrix;
+                          positive=false,
+                          pivoted=false,
+                          blocksize=YALAPACK.default_qr_blocksize(A))
+    m, n = size(A)
+    minmn = min(m, n)
+    fill!(N, zero(eltype(N)))
+    one!(view(N, (minmn + 1):m, 1:(m - minmn)))
+    if blocksize > 1
+        nb = min(minmn, blocksize)
+        A, T = YALAPACK.geqrt!(A, similar(A, nb, minmn))
+        N = YALAPACK.gemqrt!('L', 'N', A, T, N)
+    else
+        A, τ = YALAPACK.geqrf!(A)
+        N = YALAPACK.unmqr!('L', 'N', A, τ, N)
+    end
+    return N
 end

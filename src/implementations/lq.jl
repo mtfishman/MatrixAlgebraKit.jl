@@ -6,6 +6,9 @@ end
 function copy_input(::typeof(lq_compact), A::AbstractMatrix)
     return copy!(similar(A, float(eltype(A))), A)
 end
+function copy_input(::typeof(lq_null), A::AbstractMatrix)
+    return copy!(similar(A, float(eltype(A))), A)
+end
 
 function check_input(::typeof(lq_full!), A::AbstractMatrix, LQ)
     m, n = size(A)
@@ -29,6 +32,13 @@ function check_input(::typeof(lq_compact!), A::AbstractMatrix, LQ)
         check_input(lq_full!, A, LQ)
     end
 end
+function check_input(::typeof(lq_null!), A::AbstractMatrix, Nᴴ)
+    m, n = size(A)
+    minmn = min(m, n)
+    (Nᴴ isa AbstractMatrix && eltype(Nᴴ) == eltype(A) && size(Nᴴ) == (n - minmn, n)) ||
+        throw(DimensionMismatch("Matrix Nᴴ must have a the same eltype as A and a size such that [A; Nᴴ] is square"))
+    return nothing
+end
 
 # Outputs
 # -------
@@ -44,6 +54,12 @@ function initialize_output(::typeof(lq_compact!), A::AbstractMatrix, ::LAPACK_Ho
     L = similar(A, (m, minmn))
     Q = similar(A, (minmn, n))
     return (L, Q)
+end
+function initialize_output(::typeof(lq_null!), A::AbstractMatrix, ::LAPACK_HouseholderLQ)
+    m, n = size(A)
+    minmn = min(m, n)
+    Nᴴ = similar(A, (n - minmn, n))
+    return Nᴴ
 end
 
 # Implementation
@@ -61,6 +77,12 @@ function lq_compact!(A::AbstractMatrix, LQ, alg::LAPACK_HouseholderLQ)
     _lapack_lq!(A, L, Q; alg.kwargs...)
     return L, Q
 end
+function lq_null!(A::AbstractMatrix, Nᴴ, alg::LAPACK_HouseholderLQ)
+    check_input(lq_null!, A, Nᴴ)
+    _lapack_lq_null!(A, Nᴴ; alg.kwargs...)
+    return Nᴴ
+end
+
 function _lapack_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
                      positive=false,
                      pivoted=false,
@@ -116,4 +138,23 @@ function _lapack_lq!(A::AbstractMatrix, L::AbstractMatrix, Q::AbstractMatrix;
         copyto!(L, L̃)
     end
     return L, Q
+end
+
+function _lapack_lq_null!(A::AbstractMatrix, Nᴴ::AbstractMatrix;
+                          positive=false,
+                          pivoted=false,
+                          blocksize=YALAPACK.default_qr_blocksize(A))
+    m, n = size(A)
+    minmn = min(m, n)
+    fill!(Nᴴ, zero(eltype(Nᴴ)))
+    one!(view(Nᴴ, 1:(n - minmn), (minmn + 1):n))
+    if blocksize > 1
+        mb = min(minmn, blocksize)
+        A, T = YALAPACK.gelqt!(A, similar(A, mb, minmn))
+        Nᴴ = YALAPACK.gemlqt!('R', 'N', A, T, Nᴴ)
+    else
+        A, τ = YALAPACK.gelqf!(A)
+        Nᴴ = YALAPACK.unmlq!('R', 'N', A, τ, Nᴴ)
+    end
+    return Nᴴ
 end

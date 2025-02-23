@@ -4,16 +4,22 @@
     for n in (37, m, 63)
         minmn = min(m, n)
         A = randn(rng, T, m, n)
-        L, Q = lq_compact(A)
+        L, Q = @constinferred lq_compact(A)
         @test L isa Matrix{T} && size(L) == (m, minmn)
         @test Q isa Matrix{T} && size(Q) == (minmn, n)
         @test L * Q ≈ A
         @test Q * Q' ≈ I
+        Nᴴ = @constinferred lq_null(A)
+        @test Nᴴ isa Matrix{T} && size(Nᴴ) == (n - minmn, n)
+        @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
+        @test Nᴴ * Nᴴ' ≈ I
 
         Ac = similar(A)
         L2, Q2 = @constinferred lq_compact!(copy!(Ac, A), (L, Q))
         @test L2 === L
         @test Q2 === Q
+        Nᴴ2 = @constinferred lq_null!(copy!(Ac, A), Nᴴ)
+        @test Nᴴ2 === Nᴴ
 
         noL = similar(A, 0, minmn)
         Q2 = similar(Q)
@@ -26,6 +32,9 @@
         @test Q * Q' ≈ I
         lq_compact!(copy!(Ac, A), (noL, Q2); blocksize=1)
         @test Q == Q2
+        lq_null!(copy!(Ac, A), Nᴴ; blocksize=1)
+        @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
+        @test Nᴴ * Nᴴ' ≈ I
         if m <= n
             lq_compact!(copy!(Q2, A), (noL, Q2); blocksize=1) # in-place Q
             @test Q ≈ Q2
@@ -39,6 +48,9 @@
         @test Q * Q' ≈ I
         lq_compact!(copy!(Ac, A), (noL, Q2); blocksize=16)
         @test Q == Q2
+        lq_null!(copy!(Ac, A), Nᴴ; blocksize=16)
+        @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
+        @test Nᴴ * Nᴴ' ≈ I
         # pivoted
         @test_throws ArgumentError lq_compact!(copy!(Ac, A), (L, Q); pivoted=true)
         # positive

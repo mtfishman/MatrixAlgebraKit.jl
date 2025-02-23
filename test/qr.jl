@@ -1,19 +1,26 @@
-@testset "qr_compact! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
+@testset "qr_compact! and qr_null! for T = $T" for T in (Float32, Float64, ComplexF32,
+                                                         ComplexF64)
     rng = StableRNG(123)
     m = 54
     for n in (37, m, 63)
         minmn = min(m, n)
         A = randn(rng, T, m, n)
-        Q, R = qr_compact(A)
+        Q, R = @constinferred qr_compact(A)
         @test Q isa Matrix{T} && size(Q) == (m, minmn)
         @test R isa Matrix{T} && size(R) == (minmn, n)
         @test Q * R ≈ A
+        N = @constinferred qr_null(A)
+        @test N isa Matrix{T} && size(N) == (m, m - minmn)
         @test Q' * Q ≈ I
+        @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
+        @test N' * N ≈ I
 
         Ac = similar(A)
         Q2, R2 = @constinferred qr_compact!(copy!(Ac, A), (Q, R))
         @test Q2 === Q
         @test R2 === R
+        N2 = @constinferred qr_null!(copy!(Ac, A), N)
+        @test N2 === N
 
         Q2 = similar(Q)
         noR = similar(A, minmn, 0)
@@ -26,6 +33,10 @@
         @test Q' * Q ≈ I
         qr_compact!(copy!(Ac, A), (Q2, noR); blocksize=1)
         @test Q == Q2
+        qr_compact!(copy!(Ac, A), (Q2, noR); blocksize=1)
+        qr_null!(copy!(Ac, A), N; blocksize=1)
+        @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
+        @test N' * N ≈ I
         if n <= m
             qr_compact!(copy!(Q2, A), (Q2, noR); blocksize=1) # in-place Q
             @test Q ≈ Q2
@@ -39,6 +50,10 @@
         @test Q' * Q ≈ I
         qr_compact!(copy!(Ac, A), (Q2, noR); blocksize=8)
         @test Q == Q2
+        qr_null!(copy!(Ac, A), N; blocksize=8)
+        @test maximum(abs, A' * N) < eps(real(T))^(2 / 3)
+        @test N' * N ≈ I
+
         # pivoted
         qr_compact!(copy!(Ac, A), (Q, R); pivoted=true)
         @test Q * R ≈ A

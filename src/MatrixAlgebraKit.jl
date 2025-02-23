@@ -7,8 +7,8 @@ using LinearAlgebra: isposdef, ishermitian
 using LinearAlgebra: Diagonal, diag, diagind
 using LinearAlgebra: BlasFloat, BlasReal, BlasComplex, BlasInt, triu!, tril!
 
-export qr_compact, qr_full, lq_compact, lq_full
-export qr_compact!, qr_full!, lq_compact!, lq_full!
+export qr_compact, qr_full, qr_null, lq_compact, lq_full, lq_null
+export qr_compact!, qr_full!, qr_null!, lq_compact!, lq_full!, lq_null!
 export svd_compact, svd_full, svd_vals, svd_trunc
 export svd_compact!, svd_full!, svd_vals!, svd_trunc!
 export eigh_full, eigh_vals, eigh_trunc
