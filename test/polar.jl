@@ -1,13 +1,16 @@
+using MatrixAlgebraKit: PolarViaSVD
+
 @testset "left_polar! for T = $T" for T in (Float32, Float64, ComplexF32, ComplexF64)
     rng = StableRNG(123)
     m = 54
     @testset "size ($m, $n)" for n in (37, m)
         k = min(m, n)
         if LinearAlgebra.LAPACK.version() < v"3.12.0"
-            algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+            algs = PolarViaSVD.((LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
+                                 LAPACK_Bisection()))
         else
-            algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection(),
-                    LAPACK_Jacobi())
+            algs = PolarViaSVD.((LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
+                                 LAPACK_Bisection(), LAPACK_Jacobi()))
         end
         @testset "algorithm $alg" for alg in algs
             A = randn(rng, T, m, n)
@@ -35,7 +38,8 @@ end
     n = 54
     @testset "size ($m, $n)" for m in (37, n)
         k = min(m, n)
-        algs = (LAPACK_DivideAndConquer(), LAPACK_QRIteration(), LAPACK_Bisection())
+        algs = PolarViaSVD.((LAPACK_DivideAndConquer(), LAPACK_QRIteration(),
+                             LAPACK_Bisection()))
         @testset "algorithm $alg" for alg in algs
             A = randn(rng, T, m, n)
 

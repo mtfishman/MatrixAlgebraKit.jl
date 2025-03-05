@@ -28,13 +28,13 @@ end
 
 # Outputs
 # -------
-function initialize_output(::typeof(left_polar!), A::AbstractMatrix, ::LAPACK_SVDAlgorithm)
+function initialize_output(::typeof(left_polar!), A::AbstractMatrix, ::PolarViaSVD)
     m, n = size(A)
     W = similar(A)
     P = similar(A, (n, n))
     return (W, P)
 end
-function initialize_output(::typeof(right_polar!), A::AbstractMatrix, ::LAPACK_SVDAlgorithm)
+function initialize_output(::typeof(right_polar!), A::AbstractMatrix, ::PolarViaSVD)
     m, n = size(A)
     P = similar(A, (m, m))
     Wᴴ = similar(A)
@@ -43,9 +43,9 @@ end
 
 # Implementation
 # --------------
-function left_polar!(A::AbstractMatrix, WP, alg::LAPACK_SVDAlgorithm)
+function left_polar!(A::AbstractMatrix, WP, alg::PolarViaSVD)
     check_input(left_polar!, A, WP)
-    U, S, Vᴴ = svd_compact!(A, alg)
+    U, S, Vᴴ = svd_compact!(A, alg.svdalg)
     W, P = WP
     W = mul!(W, U, Vᴴ)
     S .= sqrt.(S)
@@ -53,9 +53,9 @@ function left_polar!(A::AbstractMatrix, WP, alg::LAPACK_SVDAlgorithm)
     P = mul!(P, SsqrtVᴴ', SsqrtVᴴ)
     return (W, P)
 end
-function right_polar!(A::AbstractMatrix, PWᴴ, alg::LAPACK_SVDAlgorithm)
+function right_polar!(A::AbstractMatrix, PWᴴ, alg::PolarViaSVD)
     check_input(right_polar!, A, PWᴴ)
-    U, S, Vᴴ = svd_compact!(A, alg)
+    U, S, Vᴴ = svd_compact!(A, alg.svdalg)
     P, Wᴴ = PWᴴ
     Wᴴ = mul!(Wᴴ, U, Vᴴ)
     S .= sqrt.(S)

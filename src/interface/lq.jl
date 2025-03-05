@@ -45,13 +45,13 @@ See also [`lq_full(!)`](@ref lq_full).
 """
     lq_null(A; kwargs...) -> Nᴴ
     lq_null(A, alg::AbstractAlgorithm) -> Nᴴ
-    lq_null!(A, Nᴴ; kwargs...) -> Nᴴ
-    lq_null!(A, Nᴴ, alg::AbstractAlgorithm) -> Nᴴ
+    lq_null!(A, [Nᴴ]; kwargs...) -> Nᴴ
+    lq_null!(A, [Nᴴ], alg::AbstractAlgorithm) -> Nᴴ
 
 For a (m, n) matrix A, compute the matrix `Nᴴ` corresponding the final `n - min(m, n)` rows 
 oft the unitary `Q` factor in the full LQ decomposition of `A`, i.e. the rows that are not
 present in the `Q` factor of the compact LQ decomposition. The matrix `Nᴴ` is such that the
-isometric matrix `N = adjoint(Nᴴ)` contains an orthogonal basis for the kernel (null space)
+isometric matrix `N = adjoint(Nᴴ)` contains an orthonormal basis for the kernel (null space)
 of `A` as its columns, i.e. `A * N = 0` or thus `A * adjoint(Nᴴ) = 0`.
 
 !!! note

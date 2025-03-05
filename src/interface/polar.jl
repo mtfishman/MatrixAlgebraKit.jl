@@ -48,6 +48,10 @@ See also [`left_polar(!)`](@ref left_polar).
 """
 @functiondef right_polar
 
+struct PolarViaSVD{SVDAlg} <: AbstractAlgorithm
+    svdalg::SVDAlg
+end
+
 # Algorithm selection
 # -------------------
 for f in (:left_polar, :right_polar)
@@ -71,5 +75,5 @@ end
 
 # Default to LAPACK SDD for `StridedMatrix{<:BlasFloat}`
 function default_polar_algorithm(A::StridedMatrix{<:BlasFloat}; kwargs...)
-    return LAPACK_DivideAndConquer(; kwargs...)
+    return PolarViaSVD(default_svd_algorithm(A; kwargs...))
 end
