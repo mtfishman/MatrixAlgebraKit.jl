@@ -100,6 +100,8 @@ macro algdef(name)
             function Base.show(io::IO, alg::$name)
                 return _show_alg(io, alg)
             end
+
+            Core.@__doc__ $name
         end)
 end
 
