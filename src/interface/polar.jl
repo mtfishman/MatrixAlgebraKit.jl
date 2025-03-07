@@ -48,6 +48,12 @@ See also [`left_polar(!)`](@ref left_polar).
 """
 @functiondef right_polar
 
+"""
+    PolarViaSVD(svdalg)
+    
+Algorithm for computing the polar decomposition of a matrix `A` via the singular value
+decomposition (SVD) of `A`. The `svdalg` argument specifies the SVD algorithm to use.
+"""
 struct PolarViaSVD{SVDAlg} <: AbstractAlgorithm
     svdalg::SVDAlg
 end

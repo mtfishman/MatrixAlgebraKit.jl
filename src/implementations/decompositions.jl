@@ -66,6 +66,8 @@ or the singular value decomposition of a general matrix
 using the QR Iteration algorithm.
 """
 const LAPACK_QRIteration = LAPACK_Simple
+# TODO: currently have two docstrings, should we keep both?
+
 export LAPACK_QRIteration
 
 """
@@ -77,6 +79,8 @@ or the singular value decomposition of a general matrix
 using the Bisection algorithm.
 """
 const LAPACK_Bisection = LAPACK_Expert
+# TODO: currently have two docstrings, should we keep both?
+
 export LAPACK_Bisection
 
 """
