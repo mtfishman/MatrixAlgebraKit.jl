@@ -99,7 +99,7 @@ for f in (:eigh_full, :eigh_vals)
                 return Algorithm{alg}(; kwargs...)
             else
                 isnothing(alg) || throw(ArgumentError("Unknown alg $alg"))
-                return default_eig_algorithm(A; kwargs...)
+                return default_eigh_algorithm(A; kwargs...)
             end
         end
     end
