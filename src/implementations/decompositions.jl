@@ -12,25 +12,24 @@
 """
     LAPACK_HoudeholderQR(; blocksize, positive = false, pivoted = false)
 
-Algorithm type to denote the standard LAPACK algorithm for computing the
-QR decomposition of a matrix using Householder reflectors. The specific
-LAPACK function can be controlled using the keyword arugments, i.e.
-`?geqrt` will be chosen if `blocksize > 1`. With `blocksize == 1`,
-`?geqrf` will be chosen if `pivoted == false` and
-`?geqp3` will be chosen if `pivoted == true`.
+Algorithm type to denote the standard LAPACK algorithm for computing the QR decomposition of
+a matrix using Householder reflectors. The specific LAPACK function can be controlled using
+the keyword arugments, i.e.  `?geqrt` will be chosen if `blocksize > 1`. With
+`blocksize == 1`, `?geqrf` will be chosen if `pivoted == false` and `?geqp3` will be chosen
+if `pivoted == true`.
 """
 @algdef LAPACK_HouseholderQR
 
 """
     LAPACK_HoudeholderLQ(; blocksize, positive = false)
 
-Algorithm type to denote the standard LAPACK algorithm for computing the
-LQ decomposition of a matrix using Householder reflectors. The specific
-LAPACK function can be controlled using the keyword arugments, i.e.
-`?gelqt` will be chosen if `blocksize > 1` or
-`?gelqf` will be chosen if `pivoted == false`.
+Algorithm type to denote the standard LAPACK algorithm for computing the LQ decomposition of
+a matrix using Householder reflectors. The specific LAPACK function can be controlled using
+the keyword arugments, i.e.  `?gelqt` will be chosen if `blocksize > 1` or `?gelqf` will be
+chosen if `pivoted == false`.
 """
 @algdef LAPACK_HouseholderLQ
+
 # TODO:
 @algdef LAPACK_HouseholderQL
 @algdef LAPACK_HouseholderRQ
