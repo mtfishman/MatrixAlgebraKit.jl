@@ -61,8 +61,25 @@ end
 TruncationKeepBelow(atol::Real, rtol::Real) = TruncationKeepBelow(promote(atol, rtol)...)
 
 # TODO: better names for these functions of the above types
+"""
+    truncrank(howmany::Int, by=abs, rev=true)
+
+Truncation strategy to keep the first `howmany` values when sorted according to `by` or the last `howmany` if `rev` is true.
+"""
 truncrank(howmany::Int, by=abs, rev=true) = TruncationKeepSorted(howmany, by, rev)
+
+"""
+    trunctol(atol::Real)
+
+Truncation strategy to discard the values that are smaller than `atol` in absolute value.
+"""
 trunctol(atol) = TruncationKeepFiltered(≥(atol) ∘ abs)
+
+"""
+    truncabove(atol::Real)
+
+Truncation strategy to discard the values that are larger than `atol` in absolute value.
+"""
 truncabove(atol) = TruncationKeepFiltered(≤(atol) ∘ abs)
 
 # truncate!
