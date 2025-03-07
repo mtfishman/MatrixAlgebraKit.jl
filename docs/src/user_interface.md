@@ -1,3 +1,8 @@
+```@meta
+CurrentModule = MatrixAlgebraKit
+CollapsedDocStrings = true
+```
+
 # User Interface
 
 On the user-facing side of this package, we provide various implementations and interfaces for different matrix algebra operations.
