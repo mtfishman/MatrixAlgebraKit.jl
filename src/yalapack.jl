@@ -284,7 +284,7 @@ for (geqr, gelq, geqrf, gelqf, geqlf, gerqf, geqrt, gelqt, latsqr, laswlq, geqp3
             minmn == 0 && return A, T
             lda = max(1, stride(A, 2))
             ldt = max(1, stride(T, 2))
-            work = Vector{$elty}(undef, mb * n)
+            work = Vector{$elty}(undef, mb * m)
             info = Ref{BlasInt}()
             ccall((@blasfunc($gelqt), libblastrampoline), Cvoid,
                   (Ref{BlasInt}, Ref{BlasInt}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},

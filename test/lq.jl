@@ -42,13 +42,12 @@
             @test_throws ArgumentError lq_compact!(copy!(Q2, A), (noL, Q2); positive=true)
             @test_throws ArgumentError lq_compact!(copy!(Q2, A), (noL, Q2); blocksize=8)
         end
-        # other blocking: somehow blocksize<18 leads to strange memory errors
-        lq_compact!(copy!(Ac, A), (L, Q); blocksize=18)
+        lq_compact!(copy!(Ac, A), (L, Q); blocksize=8)
         @test L * Q ≈ A
         @test Q * Q' ≈ I
-        lq_compact!(copy!(Ac, A), (noL, Q2); blocksize=18)
+        lq_compact!(copy!(Ac, A), (noL, Q2); blocksize=8)
         @test Q == Q2
-        lq_null!(copy!(Ac, A), Nᴴ; blocksize=18)
+        lq_null!(copy!(Ac, A), Nᴴ; blocksize=8)
         @test maximum(abs, A * Nᴴ') < eps(real(T))^(2 / 3)
         @test Nᴴ * Nᴴ' ≈ I
         # pivoted
