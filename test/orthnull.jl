@@ -29,7 +29,7 @@
         @test V2 * V2' + N2 * N2' ≈ I
 
         atol = eps(real(T))
-        V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); atol=atol)
+        V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=(; atol=atol))
         N2 = @constinferred left_null!(copy!(Ac, A), N; atol=atol)
         @test V2 !== V
         @test C2 !== C
@@ -41,7 +41,7 @@
         @test V2 * V2' + N2 * N2' ≈ I
 
         rtol = eps(real(T))
-        V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); rtol=rtol)
+        V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=(; rtol=rtol))
         N2 = @constinferred left_null!(copy!(Ac, A), N; rtol=rtol)
         @test V2 !== V
         @test C2 !== C
@@ -70,7 +70,7 @@
             # with kind and tol kwargs
             if kind == :svd
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
-                                                   atol=atol)
+                                                   trunc=(; atol=atol))
                 N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind, atol=atol)
                 @test V2 !== V
                 @test C2 !== C
@@ -82,7 +82,7 @@
                 @test V2 * V2' + N2 * N2' ≈ I
 
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
-                                                   rtol=rtol)
+                                                   trunc=(; rtol=rtol))
                 N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind, rtol=rtol)
                 @test V2 !== V
                 @test C2 !== C
