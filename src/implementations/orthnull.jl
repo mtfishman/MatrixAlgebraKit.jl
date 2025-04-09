@@ -81,35 +81,43 @@ end
 
 # Implementation of orth functions
 # --------------------------------
-function left_orth!(A::AbstractMatrix, VC; alg=nothing, trunc=nothing,
-                    kind=isnothing(trunc) ? :qrpos : :svd, qr_kwargs=(;), polar_kwargs=(;),
-                    svd_kwargs=(;))
+function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
+                    kind=isnothing(trunc) ? :qrpos : :svd, alg_qr=(;), alg_polar=(;),
+                    alg_svd=(;))
     check_input(left_orth!, A, VC)
     if !isnothing(trunc) && kind != :svd
         throw(ArgumentError("truncation not supported for left_orth with kind=$kind"))
     end
     if kind == :qr
-        alg = @something alg select_algorithm(qr_compact!, A; qr_kwargs...)
+        alg_qr = alg_qr isa NamedTuple ?
+                 select_algorithm(qr_compact!, A; alg_qr...) : alg_qr
         return qr_compact!(A, VC, alg)
     elseif kind == :qrpos
-        alg = @something alg select_algorithm(qr_compact!, A; positive=true, qr_kwargs...)
-        return qr_compact!(A, VC, alg)
+        alg_qr = alg_qr isa NamedTuple ?
+                 select_algorithm(qr_compact!, A; positive=true,
+                                  alg_qr...) : alg_qr
+        return qr_compact!(A, VC, alg_qr)
     elseif kind == :polar
         size(A, 1) >= size(A, 2) ||
             throw(ArgumentError("`left_orth!` with `kind = :polar` only possible for `(m, n)` matrix with `m >= n`"))
-        alg = @something alg select_algorithm(left_polar!, A; polar_kwargs...)
-        return left_polar!(A, VC, alg)
+        alg_polar = alg_polar isa NamedTuple ?
+                    select_algorithm(left_polar!, A; alg_polar...) :
+                    alg_polar
+        return left_polar!(A, VC, alg_polar)
     elseif kind == :svd && isnothing(trunc)
-        alg = @something alg select_algorithm(svd_compact!, A; svd_kwargs...)
+        alg_svd = alg_svd isa NamedTuple ?
+                  select_algorithm(svd_compact!, A; alg_svd...) : alg_svd
         V, C = VC
-        S = Diagonal(initialize_output(svd_vals!, A, alg))
-        U, S, Vᴴ = svd_compact!(A, (V, S, C), alg)
+        S = Diagonal(initialize_output(svd_vals!, A, alg_svd))
+        U, S, Vᴴ = svd_compact!(A, (V, S, C), alg_svd)
         return U, lmul!(S, Vᴴ)
     elseif kind == :svd
-        alg = @something alg select_algorithm(svd_trunc!, A; trunc, svd_kwargs...)
+        alg_svd = alg_svd isa NamedTuple ?
+                  select_algorithm(svd_compact!, A; alg_svd...) : alg_svd
+        alg_svd_trunc = select_algorithm(svd_trunc!, A; trunc, alg=alg_svd)
         V, C = VC
-        S = Diagonal(initialize_output(svd_vals!, A, alg.alg))
-        U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg)
+        S = Diagonal(initialize_output(svd_vals!, A, alg_svd_trunc.alg))
+        U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg_svd_trunc)
         return U, lmul!(S, Vᴴ)
     else
         throw(ArgumentError("`left_orth!` received unknown value `kind = $kind`"))
