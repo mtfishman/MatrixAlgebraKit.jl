@@ -138,7 +138,8 @@ function svd_compact!(A::AbstractMatrix, USVᴴ, alg::LAPACK_SVDAlgorithm)
     for j in 1:size(U, 2)
         u = view(U, :, j)
         v = view(Vᴴ, j, :)
-        s = conj(sign(argmax(abs, u)))
+        # s = conj(sign(argmax(abs, u)))
+        s = conj(sign(maximum(abs.(u))))
         u .*= s
         v .*= conj(s)
     end

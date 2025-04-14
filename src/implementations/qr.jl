@@ -121,22 +121,14 @@ function _lapack_qr!(A::AbstractMatrix, Q::AbstractMatrix, R::AbstractMatrix;
     end
 
     if positive # already fix Q even if we do not need R
-        @inbounds for j in 1:minmn
-            s = sign_safe(A[j, j])
-            @simd for i in 1:m
-                Q[i, j] *= s
-            end
-        end
+        Q *= Diagonal(sign_safe.(diag(A)))
     end
 
     if computeR
-        R̃ = triu!(view(A, axes(R)...))
+        #R̃ = triu!(view(A, axes(R)...))
+        R̃ = triu!(A[axes(R)...])
         if positive
-            @inbounds for j in n:-1:1
-                @simd for i in 1:min(minmn, j)
-                    R̃[i, j] = R̃[i, j] * conj(sign_safe(R̃[i, i]))
-                end
-            end
+            R̃ = Diagonal(sign_safe.(diag(R̃))) * R̃
         end
         if !pivoted
             copyto!(R, R̃)
