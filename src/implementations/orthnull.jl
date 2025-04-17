@@ -83,8 +83,7 @@ end
 # --------------------------------
 function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
                     kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true),
-                    alg_polar=(;),
-                    alg_svd=(;))
+                    alg_polar=(;), alg_svd=(;))
     check_input(left_orth!, A, VC)
     if !isnothing(trunc) && kind != :svd
         throw(ArgumentError("truncation not supported for left_orth with kind=$kind"))
