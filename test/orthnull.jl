@@ -3,6 +3,7 @@ using Test
 using TestExtras
 using StableRNGs
 using LinearAlgebra: LinearAlgebra, I
+using MatrixAlgebraKit: TruncationKeepAbove, TruncationKeepBelow
 
 @testset "left_orth and left_null for T = $T" for T in (Float32, Float64, ComplexF32,
                                                         ComplexF64)
@@ -21,6 +22,19 @@ using LinearAlgebra: LinearAlgebra, I
         @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
         @test N' * N ≈ I
         @test V * V' + N * N' ≈ I
+
+        for alg_qr in ((; positive=true), (; positive=false), LAPACK_HouseholderQR())
+            V, C = @constinferred left_orth(A; alg_qr)
+            N = @constinferred left_null(A; alg_qr)
+            @test V isa Matrix{T} && size(V) == (m, minmn)
+            @test C isa Matrix{T} && size(C) == (minmn, n)
+            @test N isa Matrix{T} && size(N) == (m, m - minmn)
+            @test V * C ≈ A
+            @test V' * V ≈ I
+            @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
+            @test N' * N ≈ I
+            @test V * V' + N * N' ≈ I
+        end
 
         Ac = similar(A)
         V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C))
@@ -47,16 +61,19 @@ using LinearAlgebra: LinearAlgebra, I
         @test V2 * V2' + N2 * N2' ≈ I
 
         rtol = eps(real(T))
-        V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=(; rtol=rtol))
-        N2 = @constinferred left_null!(copy!(Ac, A), N; trunc=(; rtol=rtol))
-        @test V2 !== V
-        @test C2 !== C
-        @test N2 !== C
-        @test V2 * C2 ≈ A
-        @test V2' * V2 ≈ I
-        @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
-        @test N2' * N2 ≈ I
-        @test V2 * V2' + N2 * N2' ≈ I
+        for (trunc_orth, trunc_null) in (((; rtol=rtol), (; rtol=rtol)),
+                                         (TruncationKeepAbove(0, rtol), TruncationKeepBelow(0, rtol)))
+            V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=trunc_orth)
+            N2 = @constinferred left_null!(copy!(Ac, A), N; trunc=trunc_null)
+            @test V2 !== V
+            @test C2 !== C
+            @test N2 !== C
+            @test V2 * C2 ≈ A
+            @test V2' * V2 ≈ I
+            @test LinearAlgebra.norm(A' * N2) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
+            @test N2' * N2 ≈ I
+            @test V2 * V2' + N2 * N2' ≈ I
+        end
 
         for kind in (:qr, :polar, :svd) # explicit kind kwarg
             m < n && kind == :polar && continue
