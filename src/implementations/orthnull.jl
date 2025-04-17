@@ -82,7 +82,8 @@ end
 # Implementation of orth functions
 # --------------------------------
 function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
-                    kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true), alg_polar=(;),
+                    kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true),
+                    alg_polar=(;),
                     alg_svd=(;))
     check_input(left_orth!, A, VC)
     if !isnothing(trunc) && kind != :svd
