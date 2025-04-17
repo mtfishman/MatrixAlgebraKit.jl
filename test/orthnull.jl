@@ -58,7 +58,7 @@ using LinearAlgebra: LinearAlgebra, I
         @test N2' * N2 ≈ I
         @test V2 * V2' + N2 * N2' ≈ I
 
-        for kind in (:qr, :qrpos, :polar, :svd) # explicit kind kwarg
+        for kind in (:qr, :polar, :svd) # explicit kind kwarg
             m < n && kind == :polar && continue
             V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind)
             @test V2 === V
@@ -100,9 +100,9 @@ using LinearAlgebra: LinearAlgebra, I
                 @test V2 * V2' + N2 * N2' ≈ I
             else
                 @test_throws ArgumentError left_orth!(copy!(Ac, A), (V, C); kind=kind,
-                                                      atol=atol)
+                                                      trunc=(; atol=atol))
                 @test_throws ArgumentError left_orth!(copy!(Ac, A), (V, C); kind=kind,
-                                                      rtol=rtol)
+                                                      trunc=(; rtol=rtol))
                 @test_throws ArgumentError left_null!(copy!(Ac, A), N; kind=kind, atol=atol)
                 @test_throws ArgumentError left_null!(copy!(Ac, A), N; kind=kind, rtol=rtol)
             end
