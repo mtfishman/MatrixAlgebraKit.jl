@@ -36,7 +36,7 @@ using LinearAlgebra: LinearAlgebra, I
 
         atol = eps(real(T))
         V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=(; atol=atol))
-        N2 = @constinferred left_null!(copy!(Ac, A), N; atol=atol)
+        N2 = @constinferred left_null!(copy!(Ac, A), N; trunc=(; atol=atol))
         @test V2 !== V
         @test C2 !== C
         @test N2 !== C
@@ -48,7 +48,7 @@ using LinearAlgebra: LinearAlgebra, I
 
         rtol = eps(real(T))
         V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); trunc=(; rtol=rtol))
-        N2 = @constinferred left_null!(copy!(Ac, A), N; rtol=rtol)
+        N2 = @constinferred left_null!(copy!(Ac, A), N; trunc=(; rtol=rtol))
         @test V2 !== V
         @test C2 !== C
         @test N2 !== C
@@ -77,7 +77,8 @@ using LinearAlgebra: LinearAlgebra, I
             if kind == :svd
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
                                                    trunc=(; atol=atol))
-                N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind, atol=atol)
+                N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind,
+                                               trunc=(; atol=atol))
                 @test V2 !== V
                 @test C2 !== C
                 @test N2 !== C
@@ -89,7 +90,8 @@ using LinearAlgebra: LinearAlgebra, I
 
                 V2, C2 = @constinferred left_orth!(copy!(Ac, A), (V, C); kind=kind,
                                                    trunc=(; rtol=rtol))
-                N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind, rtol=rtol)
+                N2 = @constinferred left_null!(copy!(Ac, A), N; kind=kind,
+                                               trunc=(; rtol=rtol))
                 @test V2 !== V
                 @test C2 !== C
                 @test N2 !== C
@@ -103,8 +105,10 @@ using LinearAlgebra: LinearAlgebra, I
                                                       trunc=(; atol=atol))
                 @test_throws ArgumentError left_orth!(copy!(Ac, A), (V, C); kind=kind,
                                                       trunc=(; rtol=rtol))
-                @test_throws ArgumentError left_null!(copy!(Ac, A), N; kind=kind, atol=atol)
-                @test_throws ArgumentError left_null!(copy!(Ac, A), N; kind=kind, rtol=rtol)
+                @test_throws ArgumentError left_null!(copy!(Ac, A), N; kind=kind,
+                                                      trunc=(; atol=atol))
+                @test_throws ArgumentError left_null!(copy!(Ac, A), N; kind=kind,
+                                                      trunc=(; rtol=rtol))
             end
         end
     end
@@ -142,7 +146,7 @@ end
 
         atol = eps(real(T))
         C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); trunc=(; atol=atol))
-        Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; atol=atol)
+        Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; trunc=(; atol=atol))
         @test C2 !== C
         @test Vᴴ2 !== Vᴴ
         @test Nᴴ2 !== Nᴴ
@@ -154,7 +158,7 @@ end
 
         rtol = eps(real(T))
         C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); trunc=(; rtol=rtol))
-        Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; rtol=rtol)
+        Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; trunc=(; rtol=rtol))
         @test C2 !== C
         @test Vᴴ2 !== Vᴴ
         @test Nᴴ2 !== Nᴴ
@@ -182,7 +186,8 @@ end
             if kind == :svd
                 C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
                                                      trunc=(; atol=atol))
-                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; kind=kind, atol=atol)
+                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; kind=kind,
+                                                 trunc=(; atol=atol))
                 @test C2 !== C
                 @test Vᴴ2 !== Vᴴ
                 @test Nᴴ2 !== Nᴴ
@@ -194,7 +199,8 @@ end
 
                 C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
                                                      trunc=(; rtol=rtol))
-                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; kind=kind, rtol=rtol)
+                Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; kind=kind,
+                                                 trunc=(; rtol=rtol))
                 @test C2 !== C
                 @test Vᴴ2 !== Vᴴ
                 @test Nᴴ2 !== Nᴴ
@@ -209,9 +215,9 @@ end
                 @test_throws ArgumentError right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
                                                        trunc=(; rtol=rtol))
                 @test_throws ArgumentError right_null!(copy!(Ac, A), Nᴴ; kind=kind,
-                                                       atol=atol)
+                                                       trunc=(; atol=atol))
                 @test_throws ArgumentError right_null!(copy!(Ac, A), Nᴴ; kind=kind,
-                                                       rtol=rtol)
+                                                       trunc=(; rtol=rtol))
             end
         end
     end

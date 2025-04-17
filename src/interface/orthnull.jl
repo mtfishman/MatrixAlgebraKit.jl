@@ -28,6 +28,9 @@ The keyword argument `kind` can be used to specify the specific orthogonal decom
 that should be used to factor `A`, whereas `trunc` can be used to control the
 precision in determining the rank of `A` via its singular values.
 
+`trunc` can either be a truncation strategy object or a NamedTuple with fields
+`atol`, `rtol`, and `maxrank`.
+
 This is a high-level wrapper and will use one of the decompositions
 `qr_compact!`, `svd_compact!`/`svd_trunc!`, and `left_polar!` to compute the orthogonal basis `V`, as controlled
 by the keyword arguments.
@@ -75,14 +78,17 @@ function left_orth(A::AbstractMatrix; kwargs...)
 end
 
 """
-    right_orth(A; [kind::Symbol, atol::Real=0, rtol::Real=0, alg]) -> C, Vᴴ
-    right_orth!(A, [CVᴴ]; [kind::Symbol, atol::Real=0, rtol::Real=0, alg]) -> C, Vᴴ
+    right_orth(A; [kind::Symbol, trunc, alg_lq, alg_polar, alg_svd]) -> C, Vᴴ
+    right_orth!(A, [CVᴴ]; [kind::Symbol, trunc, alg_lq, alg_polar, alg_svd]) -> C, Vᴴ
 
 Compute an orthonormal basis `V = adjoint(Vᴴ)` for the coimage of the matrix `A`, i.e.
 for the image of `adjoint(A)`, as well as a matrix `C` such that `A = C * Vᴴ`.
 The keyword argument `kind` can be used to specify the specific orthogonal decomposition
 that should be used to factor `A`, whereas `trunc` can be used to control the
 precision in determining the rank of `A` via its singular values.
+
+`trunc` can either be a truncation strategy object or a NamedTuple with fields
+`atol`, `rtol`, and `maxrank`.
 
 This is a high-level wrapper and will use call one of the decompositions
 `lq_compact!`, `svd_compact!`/`svd_trunc!`, and `right_polar!` to compute the
@@ -109,7 +115,7 @@ When `kind` is not provided, the default value is `:lq` when `isnothing(trunc)`
 and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
 for backend factorizations through the `alg_lq`, `alg_polar`, and `alg_svd` keyword arguments,
 which will only be used if the corresponding factorization is called based on the other inputs.
-If NamedTuples are passed as `alg_lq`, `alg_polar`, or `alg_svd`, a default algorithm is chosen
+If `alg_lq`, `alg_polar`, or `alg_svd` are NamedTuples, a default algorithm is chosen
 with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
 `alg_lq` defaults to `(; positive=true)` so that by default a positive QR decomposition will
 be used.
@@ -133,36 +139,38 @@ end
 # Null functions
 # --------------
 """
-    left_null(A; [kind::Symbol, atol::Real=0, rtol::Real=0, alg]) -> N
-    left_null!(A, [N]; [kind::Symbol, atol::Real=0, rtol::Real=0, alg]) -> N
+    left_null(A; [kind::Symbol, trunc, alg_qr, alg_svd]) -> N
+    left_null!(A, [N]; [kind::Symbol, alg_qr, alg_svd]) -> N
 
 Compute an orthonormal basis `N` for the cokernel of the matrix `A` of size `(m, n)`, i.e.
 the nullspace of `adjoint(A)`, such that `adjoint(A)*N ≈ 0` and `N'*N ≈ I`.
 The keyword argument `kind` can be used to specify the specific orthogonal decomposition
-that should be used to factor `A`, whereas `atol` and `rtol` can be used to control the
-precision in determining the rank of `A` via its singular values.
+that should be used to factor `A`, whereas `trunc` can be used to control the
+the rank of `A` via its singular values.
+
+`trunc` can either be a truncation strategy object or a NamedTuple with fields
+`atol`, `rtol`, and `maxrank`.
 
 This is a high-level wrapper and will use one of the decompositions `qr!` or `svd!`
 to compute the orthogonal basis `N`, as controlled by the keyword arguments.
 
 When `kind` is provided, its possible values are
 
-*   `kind == :qrpos`: `N` is computed using the positive QR decomposition.
-    This requires `iszero(atol) && iszero(rtol)` and `left_null!(A, [N], kind=:qrpos)` is equivalent to
+*   `kind == :qr`: `N` is computed using the QR decomposition.
+    This requires `isnothing(trunc)` and `left_null!(A, [N], kind=:qr)` is equivalent to
     `qr_null!(A, [N], alg)` with a default value `alg = select_algorithm(qr_compact!, A; positive=true)`
 
-*   `kind == :qr`: `N` is computed using the (nonpositive) QR decomposition.
-    This requires `iszero(atol) && iszero(rtol)` and `left_null!(A, [N], kind=:qr)` is equivalent to
-    `qr_null!(A, [N], alg)` with a default value `alg = select_algorithm(qr_compact!, A)`
-
 *   `kind == :svd`: `N` is computed using the singular value decomposition and will contain 
-    the left singular vectors corresponding to the singular values that
-    are smaller than `max(atol, rtol * σ₁)`, where `σ₁` is the largest singular value of `A`.
+    the left singular vectors corresponding to either the zero singular values if `trunc`
+    isn't specified or the singular values specified by `trunc`.
 
-When `kind` is not provided, the default value is `:qrpos` when `iszero(atol) && iszero(rtol)`
+When `kind` is not provided, the default value is `:qr` when `isnothing(trunc)`
 and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
-using the `alg` keyword argument, which should be compatible with the chosen or default value
-of `kind`.
+using the `alg_qr` and `alg_svd` keyword arguments, which will only be used by the corresponding
+factorization backend. If `alg_qr` or `alg_svd` are NamedTuples, a default algorithm is chosen
+with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
+`alg_qr` defaults to `(; positive=true)` so that by default a positive QR decomposition will
+be used.
 
 !!! note
     The bang method `left_null!` optionally accepts the output structure and possibly destroys
@@ -181,33 +189,32 @@ function left_null(A::AbstractMatrix; kwargs...)
 end
 
 """
-    right_null(A; [kind::Symbol, atol::Real=0, rtol::Real=0, alg]) -> Nᴴ
-    right_null!(A, [Nᴴ]; [kind::Symbol, atol::Real=0, rtol::Real=0, alg]) -> Nᴴ
+    right_null(A; [kind::Symbol, alg_lq, alg_svd]) -> Nᴴ
+    right_null!(A, [Nᴴ]; [kind::Symbol, alg_lq, alg_svd]) -> Nᴴ
 
 Compute an orthonormal basis `N = adjoint(Nᴴ)` for the kernel or nullspace of the matrix `A`
 of size `(m, n)`, such that `A*adjoint(Nᴴ) ≈ 0` and `Nᴴ*adjoint(Nᴴ) ≈ I`.
 The keyword argument `kind` can be used to specify the specific orthogonal decomposition
-that should be used to factor `A`, whereas `atol` and `rtol` can be used to control the
-precision in determining the rank of `A` via its singular values.
+that should be used to factor `A`, whereas `trunc` can be used to control the
+the rank of `A` via its singular values.
+
+`trunc` can either be a truncation strategy object or a NamedTuple with fields
+`atol`, `rtol`, and `maxrank`.
 
 This is a high-level wrapper and will use one of the decompositions `lq!` or `svd!`
 to compute the orthogonal basis `Nᴴ`, as controlled by the keyword arguments.
 
 When `kind` is provided, its possible values are
 
-*   `kind == :lqpos`: `Nᴴ` is computed using the positive LQ decomposition.
-    This requires `iszero(atol) && iszero(rtol)` and `right_null!(A, [Nᴴ], kind=:lqpos)` is equivalent to
-    `lq_null!(A, [Nᴴ], alg)` with a default value `alg = select_algorithm(lq_compact!, A; positive=true)`
-
 *   `kind == :lq`: `Nᴴ` is computed using the (nonpositive) LQ decomposition.
-    This requires `iszero(atol) && iszero(rtol)` and `right_null!(A, [Nᴴ], kind=:lq)` is equivalent to
-    `lq_null!(A, [Nᴴ], alg)` with a default value `alg = select_algorithm(lq_compact!, A)`
+    This requires `isnothing(trunc)` and `right_null!(A, [Nᴴ], kind=:lq)` is equivalent to
+    `lq_null!(A, [Nᴴ], alg)` with a default value `alg = select_algorithm(lq_compact!, A; positive=true)`
 
 *   `kind == :svd`: `N` is computed using the singular value decomposition and will contain 
     the left singular vectors corresponding to the singular values that
     are smaller than `max(atol, rtol * σ₁)`, where `σ₁` is the largest singular value of `A`.
 
-When `kind` is not provided, the default value is `:lqpos` when `iszero(atol) && iszero(rtol)`
+When `kind` is not provided, the default value is `:lq` when `isnothing(trunc)`
 and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
 using the `alg` keyword argument, which should be compatible with the chosen or default value
 of `kind`.

@@ -156,59 +156,70 @@ end
 
 # Implementation of null functions
 # --------------------------------
-function left_null!(A::AbstractMatrix, N; kwargs...)
+function null_truncation_strategy(; atol=nothing, rtol=nothing, maxrank=nothing)
+    if isnothing(maxrank) && isnothing(atol) && isnothing(rtol)
+        return NoTruncation()
+    end
+    atol = @something atol 0
+    rtol = @something rtol 0
+    trunc = TruncationKeepBelow(atol, rtol)
+    return !isnothing(maxrank) ? trunc & truncrank(maxrank; rev=false) : trunc
+end
+
+function left_null!(A::AbstractMatrix, N; trunc=nothing,
+                    kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true),
+                    alg_svd=(;))
     check_input(left_null!, A, N)
-    atol = get(kwargs, :atol, 0)
-    rtol = get(kwargs, :rtol, 0)
-    kind = get(kwargs, :kind, iszero(atol) && iszero(rtol) ? :qrpos : :svd)
-    if !(iszero(atol) && iszero(rtol)) && kind != :svd
-        throw(ArgumentError("nonzero tolerance not supported for left_orth with kind=$kind"))
+    if !isnothing(trunc) && kind != :svd
+        throw(ArgumentError("truncation not supported for left_null with kind=$kind"))
     end
     if kind == :qr
-        alg = get(kwargs, :alg, select_algorithm(qr_null!, A))
-        return qr_null!(A, N, alg)
-    elseif kind == :qrpos
-        alg = get(kwargs, :alg, select_algorithm(qr_null!, A; positive=true))
-        return qr_null!(A, N, alg)
-    elseif kind == :svd && iszero(atol) && iszero(rtol)
-        alg = get(kwargs, :alg, select_algorithm(svd_full!, A))
-        U, _, _ = svd_full!(A, alg)
+        alg_qr′ = algorithm_or_select_algorithm(qr_null!, A, alg_qr)
+        return qr_null!(A, N, alg_qr′)
+    elseif kind == :svd && isnothing(trunc)
+        alg_svd′ = algorithm_or_select_algorithm(svd_full!, A, alg_svd)
+        U, _, _ = svd_full!(A, alg_svd′)
+        (m, n) = size(A)
+        return copy!(N, view(U, 1:m, (n + 1):m))
+    elseif kind == :svd && isnothing(trunc)
+        alg_svd′ = algorithm_or_select_algorithm(svd_full!, A, alg_svd)
+        U, _, _ = svd_full!(A, alg_svd′)
         (m, n) = size(A)
         return copy!(N, view(U, 1:m, (n + 1):m))
     elseif kind == :svd
-        alg = get(kwargs, :alg, select_algorithm(svd_full!, A))
-        U, S, _ = svd_full!(A, alg)
-        trunc = TruncationKeepBelow(atol, rtol)
-        return truncate!(left_null!, (U, S), trunc)
+        alg_svd′ = algorithm_or_select_algorithm(svd_full!, A, alg_svd)
+        U, S, _ = svd_full!(A, alg_svd′)
+        trunc′ = trunc isa TruncationStrategy ? trunc :
+                 trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
+                 throw(ArgumentError("Unknown truncation strategy: $trunc"))
+        return truncate!(left_null!, (U, S), trunc′)
     else
         throw(ArgumentError("`left_null!` received unknown value `kind = $kind`"))
     end
 end
 
-function right_null!(A::AbstractMatrix, Nᴴ; kwargs...)
+function right_null!(A::AbstractMatrix, Nᴴ; trunc=nothing,
+                     kind=isnothing(trunc) ? :lq : :svd, alg_lq=(; positive=true),
+                     alg_svd=(;))
     check_input(right_null!, A, Nᴴ)
-    atol = get(kwargs, :atol, 0)
-    rtol = get(kwargs, :rtol, 0)
-    kind = get(kwargs, :kind, iszero(atol) && iszero(rtol) ? :lqpos : :svd)
-    if !(iszero(atol) && iszero(rtol)) && kind != :svd
-        throw(ArgumentError("nonzero tolerance not supported for left_orth with kind=$kind"))
+    if !isnothing(trunc) && kind != :svd
+        throw(ArgumentError("truncation not supported for right_null with kind=$kind"))
     end
     if kind == :lq
-        alg = get(kwargs, :alg, select_algorithm(lq_null!, A))
-        return lq_null!(A, Nᴴ, alg)
-    elseif kind == :lqpos
-        alg = get(kwargs, :alg, select_algorithm(lq_null!, A; positive=true))
-        return lq_null!(A, Nᴴ, alg)
-    elseif kind == :svd && iszero(atol) && iszero(rtol)
-        alg = get(kwargs, :alg, select_algorithm(svd_full!, A))
-        _, _, Vᴴ = svd_full!(A, alg)
+        alg_lq′ = algorithm_or_select_algorithm(lq_null!, A, alg_lq)
+        return lq_null!(A, Nᴴ, alg_lq′)
+    elseif kind == :svd && isnothing(trunc)
+        alg_svd′ = algorithm_or_select_algorithm(svd_full!, A, alg_svd)
+        _, _, Vᴴ = svd_full!(A, alg_svd′)
         (m, n) = size(A)
         return copy!(Nᴴ, view(Vᴴ, (m + 1):n, 1:n))
     elseif kind == :svd
-        alg = get(kwargs, :alg, select_algorithm(svd_full!, A))
-        _, S, Vᴴ = svd_full!(A, alg)
-        trunc = TruncationKeepBelow(atol, rtol)
-        return truncate!(right_null!, (S, Vᴴ), trunc)
+        alg_svd′ = algorithm_or_select_algorithm(svd_full!, A, alg_svd)
+        _, S, Vᴴ = svd_full!(A, alg_svd′)
+        trunc′ = trunc isa TruncationStrategy ? trunc :
+                 trunc isa NamedTuple ? null_truncation_strategy(; trunc...) :
+                 throw(ArgumentError("Unknown truncation strategy: $trunc"))
+        return truncate!(right_null!, (S, Vᴴ), trunc′)
     else
         throw(ArgumentError("`right_null!` received unknown value `kind = $kind`"))
     end
