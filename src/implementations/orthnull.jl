@@ -82,7 +82,7 @@ end
 # Implementation of orth functions
 # --------------------------------
 function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
-                    kind=isnothing(trunc) ? :qrpos : :svd, alg_qr=(;), alg_polar=(;),
+                    kind=isnothing(trunc) ? :qr : :svd, alg_qr=(; positive=true), alg_polar=(;),
                     alg_svd=(;))
     check_input(left_orth!, A, VC)
     if !isnothing(trunc) && kind != :svd
@@ -92,11 +92,6 @@ function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
         alg_qr = alg_qr isa NamedTuple ?
                  select_algorithm(qr_compact!, A; alg_qr...) : alg_qr
         return qr_compact!(A, VC, alg)
-    elseif kind == :qrpos
-        alg_qr = alg_qr isa NamedTuple ?
-                 select_algorithm(qr_compact!, A; positive=true,
-                                  alg_qr...) : alg_qr
-        return qr_compact!(A, VC, alg_qr)
     elseif kind == :polar
         size(A, 1) >= size(A, 2) ||
             throw(ArgumentError("`left_orth!` with `kind = :polar` only possible for `(m, n)` matrix with `m >= n`"))
