@@ -19,43 +19,44 @@ end
 # Orth functions
 # --------------
 """
-    left_orth(A; [kind::Symbol, atol::Real=0, rtol::Real=0, alg]) -> V, C
-    left_orth!(A, [VC]; [kind::Symbol, atol::Real=0, rtol::Real=0, alg]) -> V, C
+    left_orth(A; [kind::Symbol, trunc, alg_qr, alg_polar, alg_svd]) -> V, C
+    left_orth!(A, [VC]; [kind::Symbol, trunc, alg_qr, alg_polar, alg_svd]) -> V, C
 
 Compute an orthonormal basis `V` for the image of the matrix `A` of size `(m, n)`,
 as well as a  matrix `C` (the corestriction) such that `A` factors as `A = V * C`.
 The keyword argument `kind` can be used to specify the specific orthogonal decomposition
-that should be used to factor `A`, whereas `atol` and `rtol` can be used to control the
+that should be used to factor `A`, whereas `trunc` can be used to control the
 precision in determining the rank of `A` via its singular values.
 
 This is a high-level wrapper and will use one of the decompositions
-`qr!`, `svd!`, and `left_polar!` to compute the orthogonal basis `V`, as controlled
+`qr_compact!`, `svd_compact!`/`svd_trunc!`, and `left_polar!` to compute the orthogonal basis `V`, as controlled
 by the keyword arguments.
 
 When `kind` is provided, its possible values are
 
-*   `kind == :qrpos`: `V` and `C` are computed using the positive QR decomposition.
-    This requires `iszero(atol) && iszero(rtol)` and `left_orth!(A, [VC])` is equivalent to
+*   `kind == :qr`: `V` and `C` are computed using the QR decomposition.
+    This requires `isnothing(trunc)` and `left_orth!(A, [VC])` is equivalent to
     `qr_compact!(A, [VC], alg)` with a default value `alg = select_algorithm(qr_compact!, A; positive=true)`
 
-*   `kind == :qr`: `V` and `C` are computed using the QR decomposition,
-    This requires `iszero(atol) && iszero(rtol)` and `left_orth!(A, [VC])` is equivalent to
-    `qr_compact!(A, [VC], alg)` with a default value `alg = select_algorithm(qr_compact!, A)`
-
 *   `kind == :polar`: `V` and `C` are computed using the polar decomposition,
-    This requires `iszero(atol) && iszero(rtol)` and `left_orth!(A, [VC])` is equivalent to
+    This requires `isnothing(trunc)` and `left_orth!(A, [VC])` is equivalent to
     `left_polar!(A, [VC], alg)` with a default value `alg = select_algorithm(left_polar!, A)`
 
-*   `kind == :svd`: `V` and `C` are computed using the singular value decomposition `svd_trunc!`,
-    where `V` will contain the left singular vectors corresponding to the singular values that
-    are larger than `max(atol, rtol * σ₁)`, where `σ₁` is the largest singular value of `A`.
-    `C` is computed as the product of the singular values and the right singular vectors,
-    i.e. with `U, S, Vᴴ = svd_trunc!(A)`, we have `V = U` and `C = S * Vᴴ`.
+*   `kind == :svd`: `V` and `C` are computed using the singular value decomposition `svd_compact!`
+    if no truncation is specified through the `trunc` keyword argument or `svd_trunc!`
+    if truncation is specified through the `trunc` keyword argument.
+    `V` will contain the left singular vectors and `C` is computed as the product of the singular
+    values and the right singular vectors, i.e. with `U, S, Vᴴ = svd(A)`, we have
+    `V = U` and `C = S * Vᴴ`.
 
-When `kind` is not provided, the default value is `:qrpos` when `iszero(atol) && iszero(rtol)`
+When `kind` is not provided, the default value is `:qr` when `isnothing(trunc)`
 and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
-using the `alg` keyword argument, which should be compatible with the chosen or default value
-of `kind`.
+for backend factorizations through the `alg_qr`, `alg_polar`, and `alg_svd` keyword arguments,
+which will only be used if the corresponding factorization is called based on the other inputs.
+If NamedTuples are passed as `alg_qr`, `alg_polar`, or `alg_svd`, a default algorithm is chosen
+with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
+`alg_qr` defaults to `(; positive=true)` so that by default a positive QR decomposition will
+be used.
 
 !!! note
     The bang method `left_orth!` optionally accepts the output structure and possibly destroys
@@ -80,37 +81,38 @@ end
 Compute an orthonormal basis `V = adjoint(Vᴴ)` for the coimage of the matrix `A`, i.e.
 for the image of `adjoint(A)`, as well as a matrix `C` such that `A = C * Vᴴ`.
 The keyword argument `kind` can be used to specify the specific orthogonal decomposition
-that should be used to factor `A`, whereas `atol` and `rtol` can be used to control the
+that should be used to factor `A`, whereas `trunc` can be used to control the
 precision in determining the rank of `A` via its singular values.
 
 This is a high-level wrapper and will use call one of the decompositions
-`qr!`, `svd!`, and `left_polar!` to compute the orthogonal basis `V`, as controlled
-by the keyword arguments.
+`lq_compact!`, `svd_compact!`/`svd_trunc!`, and `right_polar!` to compute the
+orthogonal basis `V`, as controlled by the keyword arguments.
 
 When `kind` is provided, its possible values are
 
-*   `kind == :lqpos`: `C` and `Vᴴ` are computed using the positive QR decomposition.
-    This requires `iszero(atol) && iszero(rtol)` and `right_orth!(A, [CVᴴ])` is equivalent to
+*   `kind == :lq`: `C` and `Vᴴ` are computed using the QR decomposition,
+    This requires `isnothing(trunc)` and `right_orth!(A, [CVᴴ])` is equivalent to
     `lq_compact!(A, [CVᴴ], alg)` with a default value `alg = select_algorithm(lq_compact!, A; positive=true)`
 
-*   `kind == :lq`: `C` and `Vᴴ` are computed using the QR decomposition,
-    This requires `iszero(atol) && iszero(rtol)` and `right_orth!(A, [CVᴴ])` is equivalent to
-    `lq_compact!(A, [CVᴴ], alg)` with a default value `alg = select_algorithm(lq_compact!, A))`
-
 *   `kind == :polar`: `C` and `Vᴴ` are computed using the polar decomposition,
-    This requires `iszero(atol) && iszero(rtol)` and `right_orth!(A, [CVᴴ])` is equivalent to
-    `right_polar!(A, [CVᴴ], alg)` with a default value `alg = select_algorithm(right_polar!, A))`
+    This requires `isnothing(trunc)` and `right_orth!(A, [CVᴴ])` is equivalent to
+    `right_polar!(A, [CVᴴ], alg)` with a default value `alg = select_algorithm(right_polar!, A)`
 
-*   `kind == :svd`: `C` and `Vᴴ` are computed using the singular value decomposition `svd_trunc!`,
-    where `V = adjoint(Vᴴ)` will contain the right singular vectors corresponding to the singular
-    values that are larger than `max(atol, rtol * σ₁)`, where `σ₁` is the largest singular value of `A`.
-    `C` is computed as the product of the singular values and the right singular vectors,
-    i.e. with `U, S, Vᴴ = svd_trunc!(A)`, we have `C = rmul!(U, S)` and `Vᴴ = Vᴴ`.
+*   `kind == :svd`: `C` and `Vᴴ` are computed using the singular value decomposition `svd_compact!`
+    if no truncation is specified through the `trunc` keyword argument or `svd_trunc!`
+    if truncation is specified through the `trunc` keyword argument.
+    `V = adjoint(Vᴴ)` will contain the right singular vectors corresponding to the singular
+    values and `C` is computed as the product of the singular values and the right singular vectors,
+    i.e. with `U, S, Vᴴ = svd(A)`, we have `C = rmul!(U, S)` and `Vᴴ = Vᴴ`.
 
-When `kind` is not provided, the default value is `:lqpos` when `iszero(atol) && iszero(rtol)`
+When `kind` is not provided, the default value is `:lq` when `isnothing(trunc)`
 and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
-using the `alg` keyword argument, which should be compatible with the chosen or default value
-of `kind`.
+for backend factorizations through the `alg_lq`, `alg_polar`, and `alg_svd` keyword arguments,
+which will only be used if the corresponding factorization is called based on the other inputs.
+If NamedTuples are passed as `alg_lq`, `alg_polar`, or `alg_svd`, a default algorithm is chosen
+with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
+`alg_lq` defaults to `(; positive=true)` so that by default a positive QR decomposition will
+be used.
 
 !!! note
     The bang method `right_orth!` optionally accepts the output structure and possibly destroys

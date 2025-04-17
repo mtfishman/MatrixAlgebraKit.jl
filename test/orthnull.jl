@@ -141,7 +141,7 @@ end
         @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
         atol = eps(real(T))
-        C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); atol=atol)
+        C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); trunc=(; atol=atol))
         Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; atol=atol)
         @test C2 !== C
         @test Vᴴ2 !== Vᴴ
@@ -153,7 +153,7 @@ end
         @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
         rtol = eps(real(T))
-        C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); rtol=rtol)
+        C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); trunc=(; rtol=rtol))
         Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; rtol=rtol)
         @test C2 !== C
         @test Vᴴ2 !== Vᴴ
@@ -164,7 +164,7 @@ end
         @test Nᴴ2 * Nᴴ2' ≈ I
         @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
-        for kind in (:lq, :lqpos, :polar, :svd)
+        for kind in (:lq, :polar, :svd)
             n < m && kind == :polar && continue
             C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind)
             @test C2 === C
@@ -181,7 +181,7 @@ end
 
             if kind == :svd
                 C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
-                                                     atol=atol)
+                                                     trunc=(; atol=atol))
                 Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; kind=kind, atol=atol)
                 @test C2 !== C
                 @test Vᴴ2 !== Vᴴ
@@ -193,7 +193,7 @@ end
                 @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
 
                 C2, Vᴴ2 = @constinferred right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
-                                                     rtol=rtol)
+                                                     trunc=(; rtol=rtol))
                 Nᴴ2 = @constinferred right_null!(copy!(Ac, A), Nᴴ; kind=kind, rtol=rtol)
                 @test C2 !== C
                 @test Vᴴ2 !== Vᴴ
@@ -205,9 +205,9 @@ end
                 @test Vᴴ2' * Vᴴ2 + Nᴴ2' * Nᴴ2 ≈ I
             else
                 @test_throws ArgumentError right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
-                                                       atol=atol)
+                                                       trunc=(; atol=atol))
                 @test_throws ArgumentError right_orth!(copy!(Ac, A), (C, Vᴴ); kind=kind,
-                                                       rtol=rtol)
+                                                       trunc=(; rtol=rtol))
                 @test_throws ArgumentError right_null!(copy!(Ac, A), Nᴴ; kind=kind,
                                                        atol=atol)
                 @test_throws ArgumentError right_null!(copy!(Ac, A), Nᴴ; kind=kind,

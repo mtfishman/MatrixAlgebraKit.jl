@@ -121,38 +121,33 @@ function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
     end
 end
 
-function right_orth!(A::AbstractMatrix, CVᴴ; kwargs...)
+function right_orth!(A::AbstractMatrix, CVᴴ; trunc=nothing,
+                     kind=isnothing(trunc) ? :lq : :svd, alg_lq=(; positive=true),
+                     alg_polar=(;), alg_svd=(;))
     check_input(right_orth!, A, CVᴴ)
-    atol = get(kwargs, :atol, 0)
-    rtol = get(kwargs, :rtol, 0)
-    kind = get(kwargs, :kind, iszero(atol) && iszero(rtol) ? :lqpos : :svd)
-    if !(iszero(atol) && iszero(rtol)) && kind != :svd
-        throw(ArgumentError("nonzero tolerance not supported for left_orth with kind=$kind"))
+    if !isnothing(trunc) && kind != :svd
+        throw(ArgumentError("truncation not supported for right_orth with kind=$kind"))
     end
     if kind == :lq
-        alg = get(kwargs, :alg, select_algorithm(lq_compact!, A))
-        return lq_compact!(A, CVᴴ, alg)
-    elseif kind == :lqpos
-        alg = get(kwargs, :alg, select_algorithm(lq_compact!, A; positive=true))
-        return lq_compact!(A, CVᴴ, alg)
+        alg_lq′ = algorithm_or_select_algorithm(lq_compact!, A, alg_lq)
+        return lq_compact!(A, CVᴴ, alg_lq′)
     elseif kind == :polar
         size(A, 2) >= size(A, 1) ||
             throw(ArgumentError("`right_orth!` with `kind = :polar` only possible for `(m, n)` matrix with `m <= n`"))
-        alg = get(kwargs, :alg, select_algorithm(right_polar!, A))
-        return right_polar!(A, CVᴴ, alg)
-    elseif kind == :svd && iszero(atol) && iszero(rtol)
-        alg = get(kwargs, :alg, select_algorithm(svd_compact!, A))
+        alg_polar′ = algorithm_or_select_algorithm(right_polar!, A, alg_polar)
+        return right_polar!(A, CVᴴ, alg_polar′)
+    elseif kind == :svd && isnothing(trunc)
+        alg_svd′ = algorithm_or_select_algorithm(svd_compact!, A, alg_svd)
         C, Vᴴ = CVᴴ
-        S = Diagonal(initialize_output(svd_vals!, A, alg))
-        U, S, Vᴴ = svd_compact!(A, (C, S, Vᴴ), alg)
+        S = Diagonal(initialize_output(svd_vals!, A, alg_svd′))
+        U, S, Vᴴ = svd_compact!(A, (C, S, Vᴴ), alg_svd′)
         return rmul!(U, S), Vᴴ
     elseif kind == :svd
-        alg_svd = select_algorithm(svd_compact!, A)
-        trunc = TruncationKeepAbove(atol, rtol)
-        alg = get(kwargs, :alg, TruncatedAlgorithm(alg_svd, trunc))
+        alg_svd′ = algorithm_or_select_algorithm(svd_compact!, A, alg_svd)
+        alg_svd_trunc = select_algorithm(svd_trunc!, A; trunc, alg=alg_svd′)
         C, Vᴴ = CVᴴ
-        S = Diagonal(initialize_output(svd_vals!, A, alg_svd))
-        U, S, Vᴴ = svd_trunc!(A, (C, S, Vᴴ), alg)
+        S = Diagonal(initialize_output(svd_vals!, A, alg_svd_trunc.alg))
+        U, S, Vᴴ = svd_trunc!(A, (C, S, Vᴴ), alg_svd_trunc)
         return rmul!(U, S), Vᴴ
     else
         throw(ArgumentError("`right_orth!` received unknown value `kind = $kind`"))
