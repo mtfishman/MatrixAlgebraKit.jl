@@ -79,6 +79,13 @@ function initialize_output(::typeof(right_null!), A::AbstractMatrix)
     return Nᴴ
 end
 
+function algorithm_or_select_algorithm(f, A::AbstractMatrix, alg::AbstractAlgorithm)
+    return alg
+end
+function algorithm_or_select_algorithm(f, A::AbstractMatrix, kwargs::NamedTuple)
+    return select_algorithm(f, A; kwargs...)
+end
+
 # Implementation of orth functions
 # --------------------------------
 function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
@@ -89,27 +96,22 @@ function left_orth!(A::AbstractMatrix, VC; trunc=nothing,
         throw(ArgumentError("truncation not supported for left_orth with kind=$kind"))
     end
     if kind == :qr
-        alg_qr = alg_qr isa NamedTuple ?
-                 select_algorithm(qr_compact!, A; alg_qr...) : alg_qr
-        return qr_compact!(A, VC, alg)
+        alg_qr′ = algorithm_or_select_algorithm(qr_compact!, A, alg_qr)
+        return qr_compact!(A, VC, alg_qr′)
     elseif kind == :polar
         size(A, 1) >= size(A, 2) ||
             throw(ArgumentError("`left_orth!` with `kind = :polar` only possible for `(m, n)` matrix with `m >= n`"))
-        alg_polar = alg_polar isa NamedTuple ?
-                    select_algorithm(left_polar!, A; alg_polar...) :
-                    alg_polar
-        return left_polar!(A, VC, alg_polar)
+        alg_polar′ = algorithm_or_select_algorithm(left_polar!, A, alg_polar)
+        return left_polar!(A, VC, alg_polar′)
     elseif kind == :svd && isnothing(trunc)
-        alg_svd = alg_svd isa NamedTuple ?
-                  select_algorithm(svd_compact!, A; alg_svd...) : alg_svd
+        alg_svd′ = algorithm_or_select_algorithm(svd_compact!, A, alg_svd)
         V, C = VC
-        S = Diagonal(initialize_output(svd_vals!, A, alg_svd))
-        U, S, Vᴴ = svd_compact!(A, (V, S, C), alg_svd)
+        S = Diagonal(initialize_output(svd_vals!, A, alg_svd′))
+        U, S, Vᴴ = svd_compact!(A, (V, S, C), alg_svd′)
         return U, lmul!(S, Vᴴ)
     elseif kind == :svd
-        alg_svd = alg_svd isa NamedTuple ?
-                  select_algorithm(svd_compact!, A; alg_svd...) : alg_svd
-        alg_svd_trunc = select_algorithm(svd_trunc!, A; trunc, alg=alg_svd)
+        alg_svd′ = algorithm_or_select_algorithm(svd_compact!, A, alg_svd)
+        alg_svd_trunc = select_algorithm(svd_trunc!, A; trunc, alg=alg_svd′)
         V, C = VC
         S = Diagonal(initialize_output(svd_vals!, A, alg_svd_trunc.alg))
         U, S, Vᴴ = svd_trunc!(A, (V, S, C), alg_svd_trunc)
