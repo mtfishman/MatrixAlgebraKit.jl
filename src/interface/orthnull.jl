@@ -149,7 +149,7 @@ that should be used to factor `A`, whereas `trunc` can be used to control the
 the rank of `A` via its singular values.
 
 `trunc` can either be a truncation strategy object or a NamedTuple with fields
-`atol`, `rtol`, and `maxrank`.
+`atol`, `rtol`, and `maxnullity`.
 
 This is a high-level wrapper and will use one of the decompositions `qr!` or `svd!`
 to compute the orthogonal basis `N`, as controlled by the keyword arguments.
@@ -199,7 +199,7 @@ that should be used to factor `A`, whereas `trunc` can be used to control the
 the rank of `A` via its singular values.
 
 `trunc` can either be a truncation strategy object or a NamedTuple with fields
-`atol`, `rtol`, and `maxrank`.
+`atol`, `rtol`, and `maxnullity`.
 
 This is a high-level wrapper and will use one of the decompositions `lq!` or `svd!`
 to compute the orthogonal basis `Nᴴ`, as controlled by the keyword arguments.

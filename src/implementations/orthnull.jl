@@ -156,14 +156,14 @@ end
 
 # Implementation of null functions
 # --------------------------------
-function null_truncation_strategy(; atol=nothing, rtol=nothing, maxrank=nothing)
-    if isnothing(maxrank) && isnothing(atol) && isnothing(rtol)
+function null_truncation_strategy(; atol=nothing, rtol=nothing, maxnullity=nothing)
+    if isnothing(maxnullity) && isnothing(atol) && isnothing(rtol)
         return NoTruncation()
     end
     atol = @something atol 0
     rtol = @something rtol 0
     trunc = TruncationKeepBelow(atol, rtol)
-    return !isnothing(maxrank) ? trunc & truncrank(maxrank; rev=false) : trunc
+    return !isnothing(maxnullity) ? trunc & truncrank(maxnullity; rev=false) : trunc
 end
 
 function left_null!(A::AbstractMatrix, N; trunc=nothing,

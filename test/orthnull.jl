@@ -23,6 +23,19 @@ using MatrixAlgebraKit: TruncationKeepAbove, TruncationKeepBelow
         @test N' * N ≈ I
         @test V * V' + N * N' ≈ I
 
+        if m > n
+            nullity = 5
+            V, C = @constinferred left_orth(A)
+            N = @constinferred left_null(A; trunc=(; maxnullity=nullity))
+            @test V isa Matrix{T} && size(V) == (m, minmn)
+            @test C isa Matrix{T} && size(C) == (minmn, n)
+            @test N isa Matrix{T} && size(N) == (m, nullity)
+            @test V * C ≈ A
+            @test V' * V ≈ I
+            @test LinearAlgebra.norm(A' * N) ≈ 0 atol = MatrixAlgebraKit.defaulttol(T)
+            @test N' * N ≈ I
+        end
+
         for alg_qr in ((; positive=true), (; positive=false), LAPACK_HouseholderQR())
             V, C = @constinferred left_orth(A; alg_qr)
             N = @constinferred left_null(A; alg_qr)
