@@ -89,7 +89,7 @@ precision in determining the rank of `A` via its singular values.
 `trunc` can either be a truncation strategy object or a NamedTuple with fields
 `atol`, `rtol`, and `maxrank`.
 
-This is a high-level wrapper and will use call one of the decompositions
+This is a high-level wrapper and will use one of the decompositions
 [`lq_compact!`](@ref), [`svd_compact!`](@ref)/[`svd_trunc!`](@ref), and
 [`right_polar!`](@ref) to compute the orthogonal basis `V`, as controlled by the
 keyword arguments.
