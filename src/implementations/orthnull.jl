@@ -181,11 +181,6 @@ function left_null!(A::AbstractMatrix, N; trunc=nothing,
         U, _, _ = svd_full!(A, alg_svd′)
         (m, n) = size(A)
         return copy!(N, view(U, 1:m, (n + 1):m))
-    elseif kind == :svd && isnothing(trunc)
-        alg_svd′ = algorithm_or_select_algorithm(svd_full!, A, alg_svd)
-        U, _, _ = svd_full!(A, alg_svd′)
-        (m, n) = size(A)
-        return copy!(N, view(U, 1:m, (n + 1):m))
     elseif kind == :svd
         alg_svd′ = algorithm_or_select_algorithm(svd_full!, A, alg_svd)
         U, S, _ = svd_full!(A, alg_svd′)

@@ -32,8 +32,8 @@ precision in determining the rank of `A` via its singular values.
 `atol`, `rtol`, and `maxrank`.
 
 This is a high-level wrapper and will use one of the decompositions
-`qr_compact!`, `svd_compact!`/`svd_trunc!`, and `left_polar!` to compute the orthogonal basis `V`, as controlled
-by the keyword arguments.
+[`qr_compact!`](@ref), [`svd_compact!`](@ref)/[`svd_trunc!`](@ref), and[`left_polar!`](@ref)
+to compute the orthogonal basis `V`, as controlled by the keyword arguments.
 
 When `kind` is provided, its possible values are
 
@@ -45,9 +45,8 @@ When `kind` is provided, its possible values are
     This requires `isnothing(trunc)` and `left_orth!(A, [VC])` is equivalent to
     `left_polar!(A, [VC], alg)` with a default value `alg = select_algorithm(left_polar!, A)`
 
-*   `kind == :svd`: `V` and `C` are computed using the singular value decomposition `svd_compact!`
-    if no truncation is specified through the `trunc` keyword argument or `svd_trunc!`
-    if truncation is specified through the `trunc` keyword argument.
+*   `kind == :svd`: `V` and `C` are computed using the singular value decomposition `svd_trunc!` when a
+    truncation strategy is specified using the `trunc` keyword argument, and using `svd_compact!` otherwise.
     `V` will contain the left singular vectors and `C` is computed as the product of the singular
     values and the right singular vectors, i.e. with `U, S, Vᴴ = svd(A)`, we have
     `V = U` and `C = S * Vᴴ`.
@@ -91,8 +90,9 @@ precision in determining the rank of `A` via its singular values.
 `atol`, `rtol`, and `maxrank`.
 
 This is a high-level wrapper and will use call one of the decompositions
-`lq_compact!`, `svd_compact!`/`svd_trunc!`, and `right_polar!` to compute the
-orthogonal basis `V`, as controlled by the keyword arguments.
+[`lq_compact!`](@ref), [`svd_compact!`](@ref)/[`svd_trunc!`](@ref), and
+[`right_polar!`](@ref) to compute the orthogonal basis `V`, as controlled by the
+keyword arguments.
 
 When `kind` is provided, its possible values are
 
@@ -104,9 +104,8 @@ When `kind` is provided, its possible values are
     This requires `isnothing(trunc)` and `right_orth!(A, [CVᴴ])` is equivalent to
     `right_polar!(A, [CVᴴ], alg)` with a default value `alg = select_algorithm(right_polar!, A)`
 
-*   `kind == :svd`: `C` and `Vᴴ` are computed using the singular value decomposition `svd_compact!`
-    if no truncation is specified through the `trunc` keyword argument or `svd_trunc!`
-    if truncation is specified through the `trunc` keyword argument.
+*   `kind == :svd`: `C` and `Vᴴ` are computed using the singular value decomposition `svd_trunc!` when
+    a truncation strategy is specified using the `trunc` keyword argument, and using `svd_compact!` otherwise.
     `V = adjoint(Vᴴ)` will contain the right singular vectors corresponding to the singular
     values and `C` is computed as the product of the singular values and the right singular vectors,
     i.e. with `U, S, Vᴴ = svd(A)`, we have `C = rmul!(U, S)` and `Vᴴ = Vᴴ`.
@@ -117,7 +116,7 @@ for backend factorizations through the `alg_lq`, `alg_polar`, and `alg_svd` keyw
 which will only be used if the corresponding factorization is called based on the other inputs.
 If `alg_lq`, `alg_polar`, or `alg_svd` are NamedTuples, a default algorithm is chosen
 with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
-`alg_lq` defaults to `(; positive=true)` so that by default a positive QR decomposition will
+`alg_lq` defaults to `(; positive=true)` so that by default a positive LQ decomposition will
 be used.
 
 !!! note
@@ -216,8 +215,11 @@ When `kind` is provided, its possible values are
 
 When `kind` is not provided, the default value is `:lq` when `isnothing(trunc)`
 and `:svd` otherwise. Finally, finer control is obtained by providing an explicit algorithm
-using the `alg` keyword argument, which should be compatible with the chosen or default value
-of `kind`.
+using the `alg_lq` and `alg_svd` keyword arguments, which will only be used by the corresponding
+factorization backend. If `alg_lq` or `alg_svd` are NamedTuples, a default algorithm is chosen
+with `select_algorithm` and the NamedTuple is passed as keyword arguments to that algorithm.
+`alg_lq` defaults to `(; positive=true)` so that by default a positive LQ decomposition will
+be used.
 
 !!! note
     The bang method `right_null!` optionally accepts the output structure and possibly destroys
