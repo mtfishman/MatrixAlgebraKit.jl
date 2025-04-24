@@ -64,8 +64,8 @@ function select_algorithm end
 function _select_algorithm(f, A::AbstractMatrix, alg::AbstractAlgorithm)
     return alg
 end
-function _select_algorithm(f, A::AbstractMatrix, kwargs::NamedTuple)
-    return select_algorithm(f, A; kwargs...)
+function _select_algorithm(f, A::AbstractMatrix, alg::NamedTuple)
+    return select_algorithm(f, A; alg...)
 end
 
 @doc """
